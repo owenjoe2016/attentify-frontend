@@ -89,7 +89,7 @@ export default function GmailAccountPage() {
     }
   };
 
-  // When user changes store in dropdown → keep in pendingChanges
+  // When user changes store in dropdown, keep it in pendingChanges
   const handleStoreSelect = (id: string, storeId: string) => {
     setPendingChanges((prev) => ({ ...prev, [id]: storeId }));
   };

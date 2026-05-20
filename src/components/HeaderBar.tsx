@@ -19,7 +19,7 @@ export default function HeaderBar({ onMenuClick, isMobile }: HeaderBarProps) {
             className="text-gray-700 focus:outline-none"
             aria-label="Toggle sidebar"
           >
-            ☰
+            Menu
           </button>
         )}
         <p className="text-md font-semibold">{title}</p>

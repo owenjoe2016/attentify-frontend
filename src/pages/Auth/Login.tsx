@@ -159,7 +159,7 @@ export default function Login() {
               onChange={(e) => setLoginPassword(e.target.value)}
               required
               className="w-full border border-gray-300  px-3 py-2 mb-1 focus:outline-none focus:ring focus:ring-indigo-200"
-              placeholder="••••••••"
+              placeholder="********"
             />
 
             <div className="mb-4 text-right">
@@ -198,14 +198,14 @@ export default function Login() {
 
           {/* Already have an account? */}
           <div className="text-center text-sm text-gray-600 mt-0">
-            Don’t have an account?{" "}
+            Don't have an account?{" "}
             <Link to="/signup" className="text-indigo-600 hover:underline font-medium">
               Sign up
             </Link>
           </div>
 
           <div className="border-t border-gray-200 mt-4 flex justify-center items-center px-4 py-2">
-            <div className="text-sm text-gray-500">English (United States) ▼</div>
+            <div className="text-sm text-gray-500">English (United States)</div>
           </div>
         </form>
 

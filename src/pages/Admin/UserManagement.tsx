@@ -141,7 +141,7 @@ const UserManagement: React.FC = () => {
                 onClick={() => setShowCreate(false)}
                 aria-label="Close"
               >
-                ✕
+                X
               </button>
               <h2 className="text-xl font-semibold mb-4">Create New User</h2>
               <div className="space-y-3">

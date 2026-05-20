@@ -98,7 +98,7 @@ export default function Home() {
           </h1>
           <p className="mt-8 text-lg font-medium text-gray-500 sm:text-xl">
             Automate refunds, cancellations & responses across<br />
-            email, SMS, chat, and voice – all in one hub
+            email, SMS, chat, and voice - all in one hub
           </p>
           <div className="mt-10 flex flex-col sm:flex-row sm:justify-center sm:items-center gap-4">
             <a
@@ -108,7 +108,7 @@ export default function Home() {
               Start free trial
             </a>
             <a href="#" className="text-sm font-semibold text-gray-900">
-              Learn more <span aria-hidden="true">→</span>
+              Learn more <span aria-hidden="true">-&gt;</span>
             </a>
           </div>
 

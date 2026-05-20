@@ -206,7 +206,7 @@ export default function Signup() {
             <input
               type={passwordVisible ? "text" : "password"}
               className="w-full border border-gray-300  px-3 py-2 mb-1 focus:outline-none focus:ring focus:ring-indigo-200"
-              placeholder="••••••••"
+              placeholder="********"
               value={registerPassword}
               onChange={(e) => setRegisterPassword(e.target.value)}
               required
@@ -239,7 +239,7 @@ export default function Signup() {
           </div>
 
           <div className="border-t border-gray-200 mt-4 flex justify-center items-center px-4 py-2">
-            <div className="text-sm text-gray-500">English (United States) ▼</div>
+            <div className="text-sm text-gray-500">English (United States)</div>
           </div>
         </form>
 

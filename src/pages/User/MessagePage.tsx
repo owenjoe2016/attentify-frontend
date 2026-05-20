@@ -88,11 +88,11 @@ export default function MessagePage() {
     const socket = initSocket();
 
     socket.on("connect", () => {
-      console.log("✅ Socket connected:", socket.id);
+      console.log("Socket connected:", socket.id);
     });
 
     socket.on("gmail_update", (data) => {
-      console.log("📩 Gmail update:", data);
+      console.log("Gmail update:", data);
       fetchMessages();
     });
 

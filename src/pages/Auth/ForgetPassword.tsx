@@ -19,15 +19,15 @@ export default function ForgetPassword() {
       );
 
       if (res.status === 200) {
-        setMessage("✅ If this email is registered, a reset link has been sent.");
+        setMessage("If this email is registered, a reset link has been sent.");
       } else {
-        setMessage("❌ Something went wrong.");
+        setMessage("Something went wrong.");
       }
     } catch (err: any) {
       if (err.response?.data?.detail) {
-        setMessage(`❌ ${err.response.data.detail}`);
+        setMessage(`${err.response.data.detail}`);
       } else {
-        setMessage("❌ Failed to send request.");
+        setMessage("Failed to send request.");
       }
     } finally {
       setLoading(false);

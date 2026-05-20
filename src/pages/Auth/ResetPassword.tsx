@@ -37,13 +37,13 @@ export default function ResetPassword() {
       );
 
       if (res.status === 200) {
-        setMessage("✅ Password reset successful! Redirecting to login...");
+        setMessage("Password reset successful! Redirecting to login...");
         setIsSuccess(true);
         setTimeout(() => navigate("/login"), 2000);
       }
     } catch (err: any) {
       setMessage(
-        err.response?.data?.detail || "❌ Password reset failed. Try again."
+        err.response?.data?.detail || "Password reset failed. Try again."
       );
       setIsSuccess(false);
     } finally {

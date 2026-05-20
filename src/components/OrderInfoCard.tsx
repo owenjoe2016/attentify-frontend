@@ -26,7 +26,7 @@ const renderLineItems = (items?: ShopifyLineItem[]) => {
         <li key={idx} className="flex justify-between">
           <span>
             <span className="font-medium">{item.name}</span>
-            {item.quantity !== undefined && <> × {item.quantity}</>}
+            {item.quantity !== undefined && <> x {item.quantity}</>}
           </span>
           {item.price !== undefined && (
             <span className="text-gray-600">

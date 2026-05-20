@@ -11,7 +11,7 @@ export default function GeneralSettings() {
   const { notify } = useNotification();
   const { user } = useUser();
 
-  // Initial states — you can replace with real fetched data or empty strings
+  // Initial states - you can replace with real fetched data or empty strings
   const [companyName, setCompanyName] = useState("");
   const [siteUrl, setSiteUrl] = useState("");
   const [email, setEmail] = useState("");
