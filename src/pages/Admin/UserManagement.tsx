@@ -17,6 +17,7 @@ const defaultNewUser: Omit<User, "_id"> = {
 
 const ROLES = [
   { value: "admin", label: "Admin" },
+  { value: "company_owner", label: "Company Owner" },
   { value: "store_owner", label: "Store Owner" },
   { value: "agent", label: "Agent" },
   { value: "readonly", label: "Readonly" },
@@ -39,6 +40,12 @@ const UserManagement: React.FC = () => {
     userId: string | null;    
   }>({isOpen: false, userId: null});
   const { setTitle } = usePageTitle();
+
+  const roleLabel = (role?: string) =>
+    ROLES.find((r) => r.value === role)?.label || role || "-";
+
+  const statusLabel = (status?: string) =>
+    STATUSES.find((s) => s.value === status)?.label || status || "-";
 
   useEffect(() => {
     setTitle("Users");
@@ -305,9 +312,9 @@ const UserManagement: React.FC = () => {
                     <>
                       <td className="px-4 py-2">{u.email}</td>
                       <td className="px-4 py-2">{`${u.first_name} ${u.last_name}`}</td>
-                      <td className="px-4 py-2">{ROLES.find(r => r.value === u.role)?.label || u.role}</td>
-                      <td className="px-4 py-2">{STATUSES.find(s => s.value === u.status)?.label || u.status}</td>
-                      <td className="px-4 py-2">{u.team_id}</td>
+                      <td className="px-4 py-2">{roleLabel(u.role)}</td>
+                      <td className="px-4 py-2">{statusLabel(u.status)}</td>
+                      <td className="px-4 py-2">{u.team_id || "-"}</td>
                       <td className="px-4 py-2">{u.last_login?.slice(0, 19).replace("T", " ") || "-"}</td>
                       <td className="px-4 py-2 text-center">
                         <div className="flex gap-2 justify-center">
