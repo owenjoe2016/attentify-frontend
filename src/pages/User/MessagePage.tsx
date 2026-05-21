@@ -70,6 +70,7 @@ const MESSAGE_PREFERENCES_KEY = "attentify.messageListPreferences";
 
 const defaultMessagePreferences = {
   viewMode: "inbox" as ViewMode,
+  currentPage: 1,
   pageSize: 10,
   assignedFilter: "all" as AssignedFilter,
   statusFilter: "all",
@@ -110,7 +111,7 @@ export default function MessagePage() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const [search, setSearch] = useState<string>("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState<number>(savedPreferences.currentPage);
   const [pageSize, setPageSize] = useState(savedPreferences.pageSize);
   const [assignedFilter, setAssignedFilter] = useState<AssignedFilter>(savedPreferences.assignedFilter);
   const [statusFilter, setStatusFilter] = useState<string>(savedPreferences.statusFilter);
@@ -165,6 +166,7 @@ export default function MessagePage() {
       MESSAGE_PREFERENCES_KEY,
       JSON.stringify({
         viewMode,
+        currentPage,
         pageSize,
         assignedFilter,
         statusFilter,
@@ -172,7 +174,7 @@ export default function MessagePage() {
         sortOrder,
       })
     );
-  }, [viewMode, pageSize, assignedFilter, statusFilter, sortBy, sortOrder]);
+  }, [viewMode, currentPage, pageSize, assignedFilter, statusFilter, sortBy, sortOrder]);
 
   const fetchMessages = async () => {
     if (!currentCompanyId) return;

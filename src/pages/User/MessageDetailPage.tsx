@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import axios from "axios";
-//import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import type { Message } from "../../types";
 import Layout from "../../layouts/Layout";
 import EmailViewer from "../../components/EmailViewer";
@@ -134,7 +134,18 @@ const MessageDetailPage = () => {
     <Layout>
       {loading && <div className="p-4">Loading...</div>}
       {!loading && (
-        <div className="flex min-h-screen w-full p-4">
+        <div className="p-4">
+          <div className="mb-4">
+            <Link
+              to="/message"
+              className="inline-flex items-center gap-2 border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <ArrowLeftIcon className="h-4 w-4" />
+              Back
+            </Link>
+          </div>
+
+          <div className="flex min-h-screen w-full">
           {/* Main Email Thread */}
           <div className="flex-1 max-w-4xl">
             
@@ -272,6 +283,7 @@ const MessageDetailPage = () => {
                 }}
               />
             </div>
+          </div>
           </div>
         </div>
       )}
