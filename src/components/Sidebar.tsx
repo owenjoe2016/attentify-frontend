@@ -11,6 +11,7 @@ import {
   UserCircleIcon,
   ChevronRightIcon,
 } from "@heroicons/react/24/outline";
+import { clearAuthStorage } from "../utils/authStorage";
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -66,8 +67,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
   }, [accountOpen]);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearAuthStorage();
     window.location.href = "/login";
   };
 
@@ -176,12 +176,13 @@ export default function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
         `}
       >
         <div className="flex flex-col h-full">
-          <a
+          <Link
             className="h-16 flex items-center w-full pl-5 border-b border-gray-300"
-            href="/dashboard"
+            to="/dashboard"
+            onClick={() => setMobileOpen(false)}
           >
             <img className="h-10 w-auto" src="/logo.png" alt="Attentify logo" />
-          </a>
+          </Link>
 
           <div className="flex-1 w-full overflow-y-auto max-h-screen">
             {/* Top menu */}

@@ -4,6 +4,7 @@ import { login } from "../../services/auth";
 import { useUser } from "../../context/UserContext";
 import { useCompany } from "../../context/CompanyContext"; 
 import { jwtDecode } from "jwt-decode"
+import { clearAuthStorage } from "../../utils/authStorage";
 
 type JwtPayload = {
   sub: string;
@@ -26,6 +27,13 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    clearAuthStorage();
+    setUser(null);
+    setCompanies([]);
+    setCurrentCompanyId("");
+  }, [setUser, setCompanies, setCurrentCompanyId]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

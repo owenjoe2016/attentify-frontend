@@ -1,4 +1,5 @@
 import axios from "axios";
+import { clearAuthStorage } from "../utils/authStorage";
 
 const authRoutes = [
   "/login",
@@ -15,9 +16,7 @@ export function setupHttpInterceptors() {
     (response) => response,
     (error) => {
       if (error?.response?.status === 401) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        localStorage.removeItem("currentCompanyId");
+        clearAuthStorage();
 
         const currentPath = window.location.pathname;
         const isAuthRoute = authRoutes.some((route) => currentPath.startsWith(route));
