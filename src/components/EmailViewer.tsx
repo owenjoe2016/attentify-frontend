@@ -22,10 +22,59 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
   htmlBody,
   //expended,
 }) => {
-  const sanitizedHtml = DOMPurify.sanitize(htmlBody);
+  const [iframeHeight, setIframeHeight] = React.useState(600);
+  const emailDocument = React.useMemo(() => {
+    const sanitizedHtml = DOMPurify.sanitize(htmlBody || "", {
+      FORBID_TAGS: ["script", "iframe", "object", "embed"],
+    });
+
+    return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base target="_blank" />
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+        color: #111827;
+        font-family: Arial, Helvetica, sans-serif;
+        line-height: 1.5;
+      }
+      body {
+        padding: 0;
+        overflow-wrap: anywhere;
+      }
+      img {
+        max-width: 100%;
+        height: auto;
+      }
+      table {
+        max-width: 100%;
+      }
+    </style>
+  </head>
+  <body>${sanitizedHtml}</body>
+</html>`;
+  }, [htmlBody]);
   //const [isExpanded, setIsExpanded] = useState(expended);
 
   //const toggleExpand = () => setIsExpanded(prev => !prev);
+
+  const handleIframeLoad = (event: React.SyntheticEvent<HTMLIFrameElement>) => {
+    try {
+      const doc = event.currentTarget.contentDocument;
+      const nextHeight = Math.max(
+        240,
+        doc?.documentElement.scrollHeight || doc?.body.scrollHeight || 600
+      );
+      setIframeHeight(Math.min(nextHeight, 4000));
+    } catch {
+      setIframeHeight(600);
+    }
+  };
 
   return (
     <div className="bg-white border border-gray-300 p-4 max-w-5xl mx-auto mb-4">
@@ -49,8 +98,16 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
         </div>
       </header>
 
-      <section className="prose max-w-none">
-        <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
+      <section className="max-w-none">
+        <iframe
+          title={`Email body: ${subject}`}
+          className="w-full border-0 bg-white"
+          srcDoc={emailDocument}
+          sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+          referrerPolicy="no-referrer"
+          style={{ height: iframeHeight }}
+          onLoad={handleIframeLoad}
+        />
       </section>
     </div>
   );

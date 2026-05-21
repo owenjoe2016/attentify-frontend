@@ -13,6 +13,7 @@ import SMSReplySection from "../../components/SMSReplySection";
 import { usePageTitle } from "../../context/PageTitleContext";
 import { useNotification } from "../../context/NotificationContext";
 import Comments from "../../components/Comments";
+import { useCompany } from "../../context/CompanyContext";
 
 const MessageDetailPage = () => {
   const { threadId } = useParams<{ threadId: string }>();
@@ -28,6 +29,7 @@ const MessageDetailPage = () => {
   const hasFetchedMessage = useRef(false);
   const hasFetchedOrder = useRef(false);
   const { setTitle } = usePageTitle();
+  const { currentCompanyId } = useCompany();
 
   const { notify } = useNotification();
 
@@ -98,15 +100,20 @@ const MessageDetailPage = () => {
     const fetchOrderOptions = async () => {
       const matches = message?.client?.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g);
       const email = matches?.[0];
-      await axios.post(`${import.meta.env.VITE_API_URL || ""}/shopify/orders/sync`);
+
+      if (!email || !currentCompanyId) {
+        setOrderOptions([]);
+        return;
+      }
+
       try {
         const res = await axios.get(`${import.meta.env.VITE_API_URL || ""}/shopify/orders`, {
           params: {
             search: "",
-            // page: 1,
-            // size: 50,
+            page: 1,
+            size: 50,
             shop: "",
-            company_id: "",
+            company_id: currentCompanyId,
             email,
           },
         });
@@ -121,7 +128,7 @@ const MessageDetailPage = () => {
       fetchOrderInfo();
       fetchOrderOptions();
     }
-  }, [message]);
+  }, [message, currentCompanyId]);
 
   return (
     <Layout>
@@ -214,7 +221,7 @@ const MessageDetailPage = () => {
                           page: 1,
                           size: 1,
                           shop: "",
-                          company_id: "",
+                          company_id: currentCompanyId,
                         },
                       });
                       setOrderInfo((prevState) => {
