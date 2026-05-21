@@ -35,15 +35,36 @@ interface ShopifyShop {
   shop: string;
 }
 
+const ORDER_PREFERENCES_KEY = "attentify.orderListPreferences";
+
+const defaultOrderPreferences = {
+  pageSize: 10,
+  selectedShop: "",
+};
+
+function loadOrderPreferences() {
+  try {
+    const stored = localStorage.getItem(ORDER_PREFERENCES_KEY);
+    if (!stored) return defaultOrderPreferences;
+
+    return {
+      ...defaultOrderPreferences,
+      ...JSON.parse(stored),
+    };
+  } catch {
+    return defaultOrderPreferences;
+  }
+}
 
 export default function OrderPage() {
+  const savedPreferences = loadOrderPreferences();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [selectedShop, setSelectedShop] = useState("");
+  const [selectedShop, setSelectedShop] = useState(savedPreferences.selectedShop);
   const [shops, setShops] = useState<ShopifyShop[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(savedPreferences.pageSize);
   const [totalPages, setTotalPages] = useState(1);
 
   const { notify } = useNotification();
@@ -55,10 +76,22 @@ export default function OrderPage() {
     setTitle("Orders");
     fetchOrders();
     fetchShops();
-  }, [currentPage, pageSize, search, selectedShop]);
+  }, [currentPage, pageSize, search, selectedShop, currentCompanyId]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      ORDER_PREFERENCES_KEY,
+      JSON.stringify({
+        pageSize,
+        selectedShop,
+      })
+    );
+  }, [pageSize, selectedShop]);
 
   // Fetch all orders with search, pagination, and shop filter
   const fetchOrders = async () => {
+    if (!currentCompanyId) return;
+
     setLoading(true);
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL || ""}/shopify/orders`, {
@@ -82,6 +115,8 @@ export default function OrderPage() {
   };
 
   const fetchShops = async () => {
+    if (!currentCompanyId) return;
+
     setLoading(true);
     try {
       // Build base URL
@@ -132,7 +167,10 @@ export default function OrderPage() {
               />
               <select
                 value={selectedShop}
-                onChange={(e) => setSelectedShop(e.target.value)}
+                onChange={(e) => {
+                  setSelectedShop(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="border border-gray-300 px-3 py-2 text-sm"
               >
                 <option value="">All Shops</option>
@@ -227,7 +265,6 @@ export default function OrderPage() {
           )}
 
           {/* Pagination */}
-          {totalPages > 1 && (
             <div className="flex justify-between items-center mt-4">
               <div>
                 <button
@@ -253,7 +290,7 @@ export default function OrderPage() {
                   value={pageSize}
                   onChange={(e) => {
                     setPageSize(Number(e.target.value));
-                    setCurrentPage(1); // reset page
+                    setCurrentPage(1);
                   }}
                   className="border border-gray-300 px-2 py-1"
                 >
@@ -265,7 +302,6 @@ export default function OrderPage() {
                 </select>
               </div>
             </div>
-          )}
         </div>
       </div>
     </Layout>

@@ -34,12 +34,16 @@ interface Message {
   status: string;
   archived: boolean;
   trashed: boolean;
+  started_at?: string;
   last_updated: string;
   messages: ChatEntry[];
   assigned_to?: Member | null;
 }
 
 type ViewMode = "inbox" | "archived" | "trashed";
+type AssignedFilter = "all" | "assigned" | "unassigned";
+type SortBy = "started_at" | "last_updated";
+type SortOrder = "asc" | "desc";
 
 const modes: [ViewMode, React.ReactNode][] = [
   ["inbox", <InboxIcon className="w-5 h-5" key="inbox" />],
@@ -62,9 +66,35 @@ const statusList = [
   "Cancelled",
 ];
 
+const MESSAGE_PREFERENCES_KEY = "attentify.messageListPreferences";
+
+const defaultMessagePreferences = {
+  viewMode: "inbox" as ViewMode,
+  pageSize: 10,
+  assignedFilter: "all" as AssignedFilter,
+  statusFilter: "all",
+  sortBy: "last_updated" as SortBy,
+  sortOrder: "desc" as SortOrder,
+};
+
+function loadMessagePreferences() {
+  try {
+    const stored = localStorage.getItem(MESSAGE_PREFERENCES_KEY);
+    if (!stored) return defaultMessagePreferences;
+
+    return {
+      ...defaultMessagePreferences,
+      ...JSON.parse(stored),
+    };
+  } catch {
+    return defaultMessagePreferences;
+  }
+}
+
 export default function MessagePage() {
+  const savedPreferences = loadMessagePreferences();
   const [selected, setSelected] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>("inbox");
+  const [viewMode, setViewMode] = useState<ViewMode>(savedPreferences.viewMode);
   const [messages, setMessages] = useState<Message[]>([]);
   const [_, setLoading] = useState<boolean>(false);
 
@@ -81,7 +111,11 @@ export default function MessagePage() {
 
   const [search, setSearch] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(savedPreferences.pageSize);
+  const [assignedFilter, setAssignedFilter] = useState<AssignedFilter>(savedPreferences.assignedFilter);
+  const [statusFilter, setStatusFilter] = useState<string>(savedPreferences.statusFilter);
+  const [sortBy, setSortBy] = useState<SortBy>(savedPreferences.sortBy);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(savedPreferences.sortOrder);
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
@@ -126,6 +160,20 @@ export default function MessagePage() {
     setTitle("Messages");
   }, [setTitle]);
 
+  useEffect(() => {
+    localStorage.setItem(
+      MESSAGE_PREFERENCES_KEY,
+      JSON.stringify({
+        viewMode,
+        pageSize,
+        assignedFilter,
+        statusFilter,
+        sortBy,
+        sortOrder,
+      })
+    );
+  }, [viewMode, pageSize, assignedFilter, statusFilter, sortBy, sortOrder]);
+
   const fetchMessages = async () => {
     if (!currentCompanyId) return;
 
@@ -138,7 +186,11 @@ export default function MessagePage() {
             company_id: currentCompanyId,
             search,
             page: currentPage,
-            size: pageSize, 
+            size: pageSize,
+            assigned_filter: assignedFilter,
+            status_filter: statusFilter,
+            sort_by: sortBy,
+            sort_order: sortOrder,
           },
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
@@ -156,7 +208,11 @@ export default function MessagePage() {
 
   useEffect(() => {
     fetchMessages();
-  }, [currentCompanyId, currentPage, pageSize, search]);
+  }, [currentCompanyId, currentPage, pageSize, search, assignedFilter, statusFilter, sortBy, sortOrder]);
+
+  useEffect(() => {
+    setSelected([]);
+  }, [viewMode, search, assignedFilter, statusFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -180,14 +236,14 @@ export default function MessagePage() {
 
   const filteredMessages = messages
     .filter((msg) => {
+      if (statusFilter !== "all") {
+        return viewMode === "trashed" ? msg.trashed : !msg.trashed;
+      }
       if (viewMode === "inbox") return (msg.status !== "Resolved" && msg.status !== "Cancelled") && !msg.trashed;
       if (viewMode === "archived") return (msg.status === "Resolved" || msg.status === "Cancelled") && !msg.trashed;
       if (viewMode === "trashed") return msg.trashed;
       return false;
-    })
-    .filter((msg) =>
-      (msg.title ?? "").toLowerCase().includes(search.toLowerCase())
-    );
+    });
 
   const toggleSelectAll = (): void => {
     if (selected.length === filteredMessages.length && filteredMessages.length > 0) {
@@ -207,6 +263,7 @@ export default function MessagePage() {
 
   const onSearchChange = (e: ChangeEvent<HTMLInputElement>): void => {
     setSearch(e.target.value);
+    setCurrentPage(1);
   };
 
   const handleAssignMenuOpen = (id: string) => {
@@ -322,7 +379,10 @@ export default function MessagePage() {
             {modes.map(([mode, icon]) => (
               <button
                 key={mode}
-                onClick={() => setViewMode(mode)}
+                onClick={() => {
+                  setViewMode(mode);
+                  setCurrentPage(1);
+                }}
                 className={`flex items-center gap-2 text-base ${viewMode === mode
                   ? "text-blue-600 font-semibold"
                   : "text-gray-500 hover:text-gray-700"
@@ -333,6 +393,73 @@ export default function MessagePage() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+            Sort by
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value as SortBy);
+                setCurrentPage(1);
+              }}
+              className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
+            >
+              <option value="started_at">Ticket date</option>
+              <option value="last_updated">Last updated</option>
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+            Direction
+            <select
+              value={sortOrder}
+              onChange={(e) => {
+                setSortOrder(e.target.value as SortOrder);
+                setCurrentPage(1);
+              }}
+              className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
+            >
+              <option value="desc">Newest first</option>
+              <option value="asc">Oldest first</option>
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+            Assignment
+            <select
+              value={assignedFilter}
+              onChange={(e) => {
+                setAssignedFilter(e.target.value as AssignedFilter);
+                setCurrentPage(1);
+              }}
+              className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
+            >
+              <option value="all">All tickets</option>
+              <option value="assigned">Assigned</option>
+              <option value="unassigned">Unassigned</option>
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+            Status
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
+            >
+              <option value="all">All statuses</option>
+              {statusList.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="bg-white min-h-150 border border-gray-300 overflow-x-auto">
@@ -364,7 +491,7 @@ export default function MessagePage() {
             <tbody>
               {filteredMessages.length === 0 ? (
                 <tr>
-                  <td className="p-8 text-gray-400 text-center" colSpan={6}>
+                  <td className="p-8 text-gray-400 text-center" colSpan={7}>
                     No {viewLabel.toLowerCase()} emails found.
                   </td>
                 </tr>
@@ -542,7 +669,6 @@ export default function MessagePage() {
         </div>
 
         {/* Pagination */}
-          {totalPages > 1 && (
             <div className="flex justify-between items-center mt-4">
               <div>
                 <button
@@ -568,7 +694,7 @@ export default function MessagePage() {
                   value={pageSize}
                   onChange={(e) => {
                     setPageSize(Number(e.target.value));
-                    setCurrentPage(1); // reset page
+                    setCurrentPage(1);
                   }}
                   className="border border-gray-300 px-2 py-1"
                 >
@@ -580,7 +706,6 @@ export default function MessagePage() {
                 </select>
               </div>
             </div>
-          )}
       </div>
     </Layout>
   );
