@@ -14,6 +14,26 @@ type EmailViewerProps = {
   OnHandleReply?: () => void;
 };
 
+function removeExecutableEmailContent(html: string) {
+  const template = document.createElement("template");
+  template.innerHTML = html;
+
+  template.content
+    .querySelectorAll("script, iframe, object, embed")
+    .forEach((node) => node.remove());
+
+  template.content.querySelectorAll("*").forEach((node) => {
+    Array.from(node.attributes).forEach((attribute) => {
+      const name = attribute.name.toLowerCase();
+      if (name.startsWith("on") || name === "srcdoc") {
+        node.removeAttribute(attribute.name);
+      }
+    });
+  });
+
+  return template.innerHTML;
+}
+
 const EmailViewer: React.FC<EmailViewerProps> = ({
   subject,
   from,
@@ -24,7 +44,9 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
 }) => {
   const [iframeHeight, setIframeHeight] = React.useState(600);
   const emailDocument = React.useMemo(() => {
-    const sanitizedHtml = DOMPurify.sanitize(htmlBody || "", {
+    const executableContentRemoved = removeExecutableEmailContent(htmlBody || "");
+    const sanitizedHtml = DOMPurify.sanitize(executableContentRemoved, {
+      USE_PROFILES: { html: true },
       FORBID_TAGS: ["script", "iframe", "object", "embed"],
     });
 

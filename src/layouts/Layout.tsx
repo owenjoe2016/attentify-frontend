@@ -43,7 +43,7 @@ export default function Layout({ children }: LayoutProps) {
       >
         {/* Fixed header */}
         <div
-          className="fixed top-0 right-0 left-0"
+          className="fixed top-0 right-0 left-0 z-50 bg-white"
           style={{
             marginLeft: isDesktop ? 288 : 0,
             transition: "margin-left 0.6s cubic-bezier(.77,0,.18,1)",
