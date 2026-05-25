@@ -47,6 +47,9 @@ const UserManagement: React.FC = () => {
   const statusLabel = (status?: string) =>
     STATUSES.find((s) => s.value === status)?.label || status || "-";
 
+  const teamLabel = (user: User) =>
+    user.team_name || user.team_id || "-";
+
   useEffect(() => {
     setTitle("Users");
   }, [setTitle]);
@@ -314,7 +317,7 @@ const UserManagement: React.FC = () => {
                       <td className="px-4 py-2">{`${u.first_name} ${u.last_name}`}</td>
                       <td className="px-4 py-2">{roleLabel(u.role)}</td>
                       <td className="px-4 py-2">{statusLabel(u.status)}</td>
-                      <td className="px-4 py-2">{u.team_id || "-"}</td>
+                      <td className="px-4 py-2">{teamLabel(u)}</td>
                       <td className="px-4 py-2">{u.last_login?.slice(0, 19).replace("T", " ") || "-"}</td>
                       <td className="px-4 py-2 text-center">
                         <div className="flex gap-2 justify-center">

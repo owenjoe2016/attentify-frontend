@@ -48,6 +48,7 @@ export default function AdminLayout({ children }: LayoutProps) {
           <HeaderBar
             isMobile={!isDesktop}
             onMenuClick={() => setSidebarMobileOpen(true)}
+            showCompanySelector={false}
           />
         </div>
 

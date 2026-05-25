@@ -4,9 +4,14 @@ import { usePageTitle } from "../context/PageTitleContext";
 interface HeaderBarProps {
   onMenuClick: () => void;
   isMobile: boolean;
+  showCompanySelector?: boolean;
 }
 
-export default function HeaderBar({ onMenuClick, isMobile }: HeaderBarProps) {
+export default function HeaderBar({
+  onMenuClick,
+  isMobile,
+  showCompanySelector = true,
+}: HeaderBarProps) {
   const { companies, currentCompanyId, setCurrentCompanyId } = useCompany();
   const { title } = usePageTitle();
 
@@ -25,19 +30,21 @@ export default function HeaderBar({ onMenuClick, isMobile }: HeaderBarProps) {
         <p className="text-md font-semibold">{title}</p>
       </div>
 
-      <div className="flex items-center gap-4">
-        <select
-          value={currentCompanyId}
-          onChange={(e) => setCurrentCompanyId(e.target.value)}
-          className="border border-gray-300  px-2 py-1 text-sm focus:outline-none focus:ring focus:border-blue-300"
-        >
-          {companies.map((company) => (
-            <option key={company.id} value={company.id}>
-              {company.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {showCompanySelector && companies.length > 0 && (
+        <div className="flex items-center gap-4">
+          <select
+            value={currentCompanyId}
+            onChange={(e) => setCurrentCompanyId(e.target.value)}
+            className="border border-gray-300  px-2 py-1 text-sm focus:outline-none focus:ring focus:border-blue-300"
+          >
+            {companies.map((company) => (
+              <option key={company.id} value={company.id}>
+                {company.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </div>
   );
 }
