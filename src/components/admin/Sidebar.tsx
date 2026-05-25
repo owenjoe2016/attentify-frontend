@@ -4,7 +4,8 @@ import {
   HomeIcon,
   UserCircleIcon,
   ChevronRightIcon,
-  UsersIcon
+  UsersIcon,
+  ShieldCheckIcon
 } from "@heroicons/react/24/outline";
 import { clearAuthStorage } from "../../utils/authStorage";
 
@@ -157,6 +158,17 @@ export default function Sidebar({
               >
                 <UsersIcon className="w-6 h-6" />
                 <span className="ml-3 text-base font-medium">User</span>
+              </Link>
+
+              <Link
+                to="/admin/governance"
+                className={`flex items-center w-full h-12 px-4 mt-2 transition focus:outline-none ${
+                  isActive("/admin/governance") ? "bg-gray-100" : "hover:bg-gray-100"
+                }`}
+                onClick={() => setMobileOpen(false)}
+              >
+                <ShieldCheckIcon className="w-6 h-6" />
+                <span className="ml-3 text-base font-medium">Governance</span>
               </Link>
             </div>
           </div>

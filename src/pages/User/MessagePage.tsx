@@ -66,6 +66,24 @@ const statusList = [
   "Cancelled",
 ];
 
+const inboxStatusList = [
+  "Open",
+  "Pending",
+  "Escalated",
+  "Awaiting Approval",
+];
+
+const archivedStatusList = [
+  "Resolved",
+  "Cancelled",
+];
+
+const getStatusFilterOptions = (mode: ViewMode) => {
+  if (mode === "inbox") return inboxStatusList;
+  if (mode === "archived") return archivedStatusList;
+  return statusList;
+};
+
 const MESSAGE_PREFERENCES_KEY = "attentify.messageListPreferences";
 
 const defaultMessagePreferences = {
@@ -118,6 +136,11 @@ export default function MessagePage() {
   const [sortBy, setSortBy] = useState<SortBy>(savedPreferences.sortBy);
   const [sortOrder, setSortOrder] = useState<SortOrder>(savedPreferences.sortOrder);
   const [totalPages, setTotalPages] = useState(1);
+  const statusFilterOptions = getStatusFilterOptions(viewMode);
+  const effectiveStatusFilter =
+    statusFilter === "all" || statusFilterOptions.includes(statusFilter)
+      ? statusFilter
+      : "all";
 
   useEffect(() => {
     const socket = initSocket();
@@ -189,8 +212,9 @@ export default function MessagePage() {
             search,
             page: currentPage,
             size: pageSize,
+            view_mode: viewMode,
             assigned_filter: assignedFilter,
-            status_filter: statusFilter,
+            status_filter: effectiveStatusFilter,
             sort_by: sortBy,
             sort_order: sortOrder,
           },
@@ -210,7 +234,14 @@ export default function MessagePage() {
 
   useEffect(() => {
     fetchMessages();
-  }, [currentCompanyId, currentPage, pageSize, search, assignedFilter, statusFilter, sortBy, sortOrder]);
+  }, [currentCompanyId, currentPage, pageSize, search, viewMode, assignedFilter, effectiveStatusFilter, sortBy, sortOrder]);
+
+  useEffect(() => {
+    if (statusFilter !== "all" && !statusFilterOptions.includes(statusFilter)) {
+      setStatusFilter("all");
+      setCurrentPage(1);
+    }
+  }, [viewMode, statusFilter, statusFilterOptions]);
 
   useEffect(() => {
     setSelected([]);
@@ -238,12 +269,15 @@ export default function MessagePage() {
 
   const filteredMessages = messages
     .filter((msg) => {
-      if (statusFilter !== "all") {
-        return viewMode === "trashed" ? msg.trashed : !msg.trashed;
+      if (viewMode === "inbox") {
+        return inboxStatusList.includes(msg.status) && !msg.trashed;
       }
-      if (viewMode === "inbox") return (msg.status !== "Resolved" && msg.status !== "Cancelled") && !msg.trashed;
-      if (viewMode === "archived") return (msg.status === "Resolved" || msg.status === "Cancelled") && !msg.trashed;
-      if (viewMode === "trashed") return msg.trashed;
+      if (viewMode === "archived") {
+        return archivedStatusList.includes(msg.status) && !msg.trashed;
+      }
+      if (viewMode === "trashed") {
+        return msg.trashed;
+      }
       return false;
     });
 
@@ -455,7 +489,7 @@ export default function MessagePage() {
               className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
             >
               <option value="all">All statuses</option>
-              {statusList.map((status) => (
+              {statusFilterOptions.map((status) => (
                 <option key={status} value={status}>
                   {status}
                 </option>

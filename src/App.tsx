@@ -33,6 +33,7 @@ import { ConfirmDialogProvider } from "./context/ConfirmDialogContext";
 // admin pages
 import AdminDashboard from "./pages/Admin/Dashboard";
 import UserManagement from "./pages/Admin/UserManagement";
+import Governance from "./pages/Admin/Governance";
 import "./App.css";
 
 function App() {  
@@ -67,6 +68,15 @@ function App() {
                     element={
                       <ProtectedRoute allowedRoles={['admin']}>
                         <UserManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/admin/governance"
+                    element={
+                      <ProtectedRoute allowedRoles={['admin']}>
+                        <Governance />
                       </ProtectedRoute>
                     }
                   />
