@@ -43,6 +43,17 @@ export default function TeamMembers() {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const canManageMembers = user?.role === "admin" || user?.role === "company_owner";
+  const activeOwnerCount = members.filter(
+    (member) => member.status === "active" && member.role === "company_owner"
+  ).length;
+
+  const isCurrentUserMember = (member: Member) =>
+    member.status === "active" && member.email === user?.email;
+
+  const isProtectedOwner = (member: Member) =>
+    member.status === "active" &&
+    member.role === "company_owner" &&
+    (isCurrentUserMember(member) || activeOwnerCount <= 1);
 
   const fetchMembers = async () => {
     try {
@@ -70,6 +81,17 @@ export default function TeamMembers() {
   }, [currentCompanyId]);
 
   const handleRoleChange = (index: number, newRole: Role) => {
+    const member = members[index];
+    if (member && isProtectedOwner(member) && newRole !== "company_owner") {
+      notify(
+        "error",
+        isCurrentUserMember(member)
+          ? "You cannot remove your own owner role."
+          : "At least one company owner must remain."
+      );
+      return;
+    }
+
     const updated = members.map((m, i) =>
       i === index ? { ...m, role: newRole } : m
     );
@@ -157,7 +179,17 @@ export default function TeamMembers() {
   };
 
   const onDelete = (id: string) => {
-    setSelectedMember(members.find((m) => m.id === id) || null);
+    const member = members.find((m) => m.id === id) || null;
+    if (member && isCurrentUserMember(member)) {
+      notify("error", "You cannot delete your own account.");
+      return;
+    }
+    if (member && member.role === "company_owner" && activeOwnerCount <= 1) {
+      notify("error", "At least one company owner must remain.");
+      return;
+    }
+
+    setSelectedMember(member);
     setIsOpen(true);
   };
 
@@ -244,7 +276,15 @@ export default function TeamMembers() {
                         onChange={(e) =>
                           handleRoleChange(index, e.target.value as Role)
                         }
+                        disabled={isProtectedOwner(member)}
                         className="border border-gray-300 px-2 py-1"
+                        title={
+                          isProtectedOwner(member)
+                            ? isCurrentUserMember(member)
+                              ? "You cannot remove your own owner role"
+                              : "At least one company owner must remain"
+                            : undefined
+                        }
                       >
                         <option value="company_owner">Owner</option>
                         <option value="store_owner">Store Owner</option>
@@ -279,7 +319,15 @@ export default function TeamMembers() {
                   <td className="px-4 py-2">
                     <button
                       onClick={() => onDelete(member.id)}
-                      className="px-3 py-1 bg-red-500 text-white text-sm hover:bg-red-600"
+                      disabled={isCurrentUserMember(member) || (member.role === "company_owner" && activeOwnerCount <= 1)}
+                      className="px-3 py-1 bg-red-500 text-white text-sm hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      title={
+                        isCurrentUserMember(member)
+                          ? "You cannot delete your own account"
+                          : member.role === "company_owner" && activeOwnerCount <= 1
+                            ? "At least one company owner must remain"
+                            : undefined
+                      }
                     >
                       Delete
                     </button>

@@ -14,6 +14,7 @@ import { useNotification } from "../../context/NotificationContext";
 import { usePageTitle } from "../../context/PageTitleContext";
 import { useCompany } from "../../context/CompanyContext";
 import { useUser } from "../../context/UserContext";
+import { useConfirmDialog } from "../../context/ConfirmDialogContext";
 import { initSocket } from "../../services/socket";
 
 interface ChatEntry {
@@ -132,6 +133,7 @@ export default function MessagePage() {
   const [members, setMembers] = useState<Member[]>([]);
   const { currentCompanyId } = useCompany();
   const { notify } = useNotification();
+  const { confirm } = useConfirmDialog();
   const { setTitle } = usePageTitle();
   const { user } = useUser();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -150,7 +152,7 @@ export default function MessagePage() {
   const userRole = user?.role || "agent";
   const canMoveMessages = ownerRoles.includes(userRole);
   const canUpdateStatus = userRole !== "readonly";
-  const canPermanentlyDeleteMessages = canMoveMessages || customPermissions.includes(permanentDeletePermission);
+  const canPermanentlyDeleteMessages = customPermissions.includes(permanentDeletePermission);
   const effectiveStatusFilter =
     statusFilter === "all" || statusFilterOptions.includes(statusFilter)
       ? statusFilter
@@ -421,13 +423,24 @@ export default function MessagePage() {
 
   const handleDelete = async (id: string) => {
     if (viewMode === "trashed" && !canPermanentlyDeleteMessages) {
-      notify("error", "Permanent delete is not enabled for your role.");
+      notify("error", "Permanent delete is not enabled for your account.");
       return;
     }
     if (viewMode !== "trashed" && !canMoveMessages) {
       notify("error", "Only owners can move messages to trash.");
       return;
     }
+
+    const confirmed = await confirm({
+      title: viewMode === "trashed" ? "Permanently Delete Message" : "Move Message to Trash",
+      message:
+        viewMode === "trashed"
+          ? "Are you sure you want to permanently delete this message? This action cannot be undone."
+          : "Are you sure you want to move this message to trash?",
+      confirmText: viewMode === "trashed" ? "Delete Permanently" : "Move to Trash",
+      cancelText: "Cancel",
+    });
+    if (!confirmed) return;
 
     try {
       if (viewMode === "trashed") {
@@ -671,7 +684,7 @@ export default function MessagePage() {
                     </td>
                     {/* Assigned */}
                     <td className="px-6 py-4 w-1/10">
-                      {canUpdateStatus ? (
+                      {ownerRoles.includes(userRole) ? (
                         <button
                           className="flex items-center gap-2 px-2 py-1 bg-gray-100 hover:bg-blue-50 rounded cursor-pointer"
                           onClick={() => handleAssignMenuOpen(msg._id)}
@@ -745,7 +758,7 @@ export default function MessagePage() {
                     </td>
                     {/* Status */}
                     <td className="px-6 py-4 w-1/10">
-                      {ownerRoles.includes(userRole) ? (
+                      {canUpdateStatus ? (
                         // Clickable status button for allowed roles
                         <button
                           className={`px-3 py-1 text-xs font-semibold rounded ${
