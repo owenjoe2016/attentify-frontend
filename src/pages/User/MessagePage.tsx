@@ -153,6 +153,7 @@ export default function MessagePage() {
   const canMoveMessages = ownerRoles.includes(userRole);
   const canUpdateStatus = userRole !== "readonly";
   const canPermanentlyDeleteMessages = customPermissions.includes(permanentDeletePermission);
+  const canTrashMessages = canMoveMessages || canPermanentlyDeleteMessages;
   const effectiveStatusFilter =
     statusFilter === "all" || statusFilterOptions.includes(statusFilter)
       ? statusFilter
@@ -426,8 +427,8 @@ export default function MessagePage() {
       notify("error", "Permanent delete is not enabled for your account.");
       return;
     }
-    if (viewMode !== "trashed" && !canMoveMessages) {
-      notify("error", "Only owners can move messages to trash.");
+    if (viewMode !== "trashed" && !canTrashMessages) {
+      notify("error", "Delete is not enabled for your account.");
       return;
     }
 
@@ -823,7 +824,7 @@ export default function MessagePage() {
                             <ArchiveBoxArrowDownIcon className="w-6 h-6" />
                           </button>
                         )}
-                        {(viewMode !== "trashed" ? canMoveMessages : canPermanentlyDeleteMessages) && (
+                        {(viewMode !== "trashed" ? canTrashMessages : canPermanentlyDeleteMessages) && (
                           <button
                             onClick={() => handleDelete(msg._id)}
                             className="flex items-center justify-center p-2 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
