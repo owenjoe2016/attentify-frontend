@@ -157,7 +157,33 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
   const { notify } = useNotification();
   const { confirm } = useConfirmDialog();
   const [showRefundModal, setShowRefundModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
   const hasActionableOrder = Boolean(order?.shopify_order?.order_id && order?.shopify_order?.shop);
+  const paymentStatus = String(order?.shopify_order?.payment_status || "").toLowerCase();
+  const fulfillmentStatus = String(order?.shopify_order?.fulfillment_status || "").toLowerCase();
+  const orderStatus = String(order?.shopify_order?.status || "").toLowerCase();
+  const financialStatus = String(order?.shopify_order?.financial_status || "").toLowerCase();
+  const hasCancellationAction = Boolean(
+    order?.shopify_order?.order_actions?.some((action) => action.type === "cancellation")
+  );
+  const isRefunded = paymentStatus === "refunded" || financialStatus === "refunded";
+  const isCancelled = Boolean(order?.shopify_order?.cancelled_at) ||
+    orderStatus === "cancelled" ||
+    orderStatus === "canceled" ||
+    fulfillmentStatus === "cancelled" ||
+    fulfillmentStatus === "canceled";
+  const refundDisabledReason = isRefunded ? "This order is already refunded." : "";
+  const cancelDisabledReason = isCancelled
+    ? "This order is already cancelled."
+    : isRefunded
+      ? "This order is already refunded."
+      : hasCancellationAction
+        ? "Cancellation has already been recorded for this order."
+        : "";
+  const isRefundDisabled = Boolean(refundDisabledReason);
+  const isCancelDisabled = Boolean(cancelDisabledReason);
 
   const postOrderAction = async (path: string, payload: Record<string, unknown>, fallbackMessage: string) => {
     if (!hasActionableOrder) {
@@ -279,23 +305,34 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
     await postOrderAction("fulfillment-release", {}, "Fulfillment hold released successfully.");
   };
 
-  const handleCancel = async () => {
+  const openCancelModal = () => {
     if (!hasActionableOrder) {
       notify("error", "Please select a valid Shopify order first.");
       return;
     }
+    if (isCancelDisabled) {
+      notify("error", cancelDisabledReason);
+      return;
+    }
 
-    const ok = await confirm({
-      title: "Confirm Cancellation",
-      message: "Are you sure you want to cancel this order?",
-    });
-    if (!ok) return;
-    const note = window.prompt("Enter the cancellation reason:");
-    if (!note?.trim()) {
+    setCancelReason("");
+    setShowCancelModal(true);
+  };
+
+  const closeCancelModal = () => {
+    if (isCancelling) return;
+    setShowCancelModal(false);
+    setCancelReason("");
+  };
+
+  const handleCancel = async () => {
+    const note = cancelReason.trim();
+    if (!note) {
       notify("error", "Cancellation reason is required.");
       return;
     }
 
+    setIsCancelling(true);
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/shopify/order/cancel`,
@@ -317,12 +354,16 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
         response.data?.message ||
         "Order cancelled successfully!";
       notify(response.data?.approval_required ? "success" : "success", msg);
+      setShowCancelModal(false);
+      setCancelReason("");
       onActionCompleted?.();
     } catch (error: any) {
       const errorMsg = getApiErrorMessage(error, "Order cancellation failed.");
 
       console.error("Cancel error:", errorMsg, error.response?.data);
       notify("error", errorMsg);
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -482,18 +523,36 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
                       <div className="mt-4 flex justify-end gap-2">
                         <button
                           onClick={() => setShowRefundModal(true)}
-                          className="px-3 py-1.5 bg-green-500 text-white text-sm hover:bg-green-600 transition"
+                          disabled={isRefundDisabled}
+                          title={refundDisabledReason || "Refund this order"}
+                          className="px-3 py-1.5 bg-green-500 text-white text-sm hover:bg-green-600 transition disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
                         >
                           Refund
                         </button>
 
                         <button
-                          onClick={handleCancel}
-                          className="px-3 py-1.5 bg-red-500 text-white text-sm hover:bg-red-600 transition"
+                          onClick={openCancelModal}
+                          disabled={isCancelDisabled}
+                          title={cancelDisabledReason || "Cancel this order"}
+                          className="px-3 py-1.5 bg-red-500 text-white text-sm hover:bg-red-600 transition disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
                         >
                           Cancel
                         </button>
                       </div>
+
+                      {(refundDisabledReason || cancelDisabledReason) && (
+                        <div className="mt-3 border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+                          {isRefunded && (
+                            <div>This order is already refunded.</div>
+                          )}
+                          {isCancelled && (
+                            <div>This order is already cancelled.</div>
+                          )}
+                          {!isCancelled && !isRefunded && hasCancellationAction && (
+                            <div>Cancellation has already been recorded for this order.</div>
+                          )}
+                        </div>
+                      )}
 
                       <div className="mt-3 grid grid-cols-2 gap-2">
                         <button
@@ -551,6 +610,45 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
           onClose={() => setShowRefundModal(false)}
           onActionCompleted={onActionCompleted}
         />
+      )}
+
+      {showCancelModal && hasActionableOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md bg-white p-6 shadow-lg">
+            <h3 className="text-lg font-semibold mb-2">Cancel Order</h3>
+            <p className="text-sm text-gray-700 mb-4">
+              Enter a cancellation reason before sending this action to Shopify.
+            </p>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Cancellation reason
+            </label>
+            <textarea
+              value={cancelReason}
+              onChange={(event) => setCancelReason(event.target.value)}
+              className="w-full min-h-[100px] border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Customer requested cancellation."
+              disabled={isCancelling}
+            />
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeCancelModal}
+                disabled={isCancelling}
+                className="px-3 py-1.5 border border-gray-300 bg-white text-sm hover:bg-gray-50 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={isCancelling}
+                className="px-3 py-1.5 bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-60"
+              >
+                {isCancelling ? "Cancelling..." : "Confirm Cancel"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
