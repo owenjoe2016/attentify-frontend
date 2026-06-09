@@ -35,11 +35,16 @@ interface ShopifyShop {
   shop: string;
 }
 
+type SortField = "order" | "date" | "payment_status" | "fulfillment_status";
+type SortOrder = "asc" | "desc";
+
 const ORDER_PREFERENCES_KEY = "attentify.orderListPreferences";
 
 const defaultOrderPreferences = {
   pageSize: 10,
   selectedShop: "",
+  sortBy: "date" as SortField,
+  sortOrder: "desc" as SortOrder,
 };
 
 function loadOrderPreferences() {
@@ -66,6 +71,8 @@ export default function OrderPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(savedPreferences.pageSize);
   const [totalPages, setTotalPages] = useState(1);
+  const [sortBy, setSortBy] = useState<SortField>(savedPreferences.sortBy);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(savedPreferences.sortOrder);
 
   const { notify } = useNotification();
   const { setTitle } = usePageTitle();
@@ -76,7 +83,7 @@ export default function OrderPage() {
     setTitle("Orders");
     fetchOrders();
     fetchShops();
-  }, [currentPage, pageSize, search, selectedShop, currentCompanyId]);
+  }, [currentPage, pageSize, search, selectedShop, sortBy, sortOrder, currentCompanyId]);
 
   useEffect(() => {
     localStorage.setItem(
@@ -84,9 +91,11 @@ export default function OrderPage() {
       JSON.stringify({
         pageSize,
         selectedShop,
+        sortBy,
+        sortOrder,
       })
     );
-  }, [pageSize, selectedShop]);
+  }, [pageSize, selectedShop, sortBy, sortOrder]);
 
   // Fetch all orders with search, pagination, and shop filter
   const fetchOrders = async () => {
@@ -100,6 +109,8 @@ export default function OrderPage() {
           page: currentPage,
           size: pageSize,
           shop: selectedShop,
+          sort_by: sortBy,
+          sort_order: sortOrder,
           company_id: currentCompanyId, 
         },
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -159,6 +170,41 @@ export default function OrderPage() {
     }
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortBy === field) {
+      setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder(field === "date" ? "desc" : "asc");
+    }
+    setCurrentPage(1);
+  };
+
+  const sortIndicator = (field: SortField) => {
+    if (sortBy !== field) return "";
+    return sortOrder === "asc" ? " ↑" : " ↓";
+  };
+
+  const SortHeader = ({
+    field,
+    children,
+  }: {
+    field: SortField;
+    children: string;
+  }) => (
+    <th className="py-4 px-3 text-left font-semibold text-gray-600">
+      <button
+        type="button"
+        onClick={() => handleSort(field)}
+        className="font-semibold text-gray-600 hover:text-gray-900"
+        title={`Sort by ${children}`}
+      >
+        {children}
+        {sortIndicator(field)}
+      </button>
+    </th>
+  );
+
   return (
     <Layout>
       <div className="p-4">
@@ -170,7 +216,10 @@ export default function OrderPage() {
                 type="text"
                 placeholder="Search by order or customer email"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="border border-gray-300 px-3 py-2 w-full md:w-64 text-sm"
               />
               <select
@@ -208,13 +257,13 @@ export default function OrderPage() {
               <table className="min-w-full text-sm divide-y divide-gray-200">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="py-4 px-3 text-left font-semibold text-gray-600">Order</th>
+                    <SortHeader field="order">Order</SortHeader>
                     <th className="py-4 px-3 text-left font-semibold text-gray-600">Shop</th>
-                    <th className="py-4 px-3 text-left font-semibold text-gray-600">Date</th>
+                    <SortHeader field="date">Date</SortHeader>
                     <th className="py-4 px-3 text-left font-semibold text-gray-600">Customer</th>
                     <th className="py-4 px-3 text-left font-semibold text-gray-600">Total</th>
-                    <th className="py-4 px-3 text-left font-semibold text-gray-600">Payment Status</th>
-                    <th className="py-4 px-3 text-left font-semibold text-gray-600">Fulfillment Status</th>
+                    <SortHeader field="payment_status">Payment Status</SortHeader>
+                    <SortHeader field="fulfillment_status">Fulfillment Status</SortHeader>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
