@@ -123,8 +123,14 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
   const { notify } = useNotification();
   const { confirm } = useConfirmDialog();
   const [showRefundModal, setShowRefundModal] = useState(false);
+  const hasActionableOrder = Boolean(order?.shopify_order?.order_id && order?.shopify_order?.shop);
 
   const postOrderAction = async (path: string, payload: Record<string, unknown>, fallbackMessage: string) => {
+    if (!hasActionableOrder) {
+      notify("error", "Please select a valid Shopify order first.");
+      return;
+    }
+
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/shopify/order/${path}`,
@@ -244,6 +250,11 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
   };
 
   const handleCancel = async () => {
+    if (!hasActionableOrder) {
+      notify("error", "Please select a valid Shopify order first.");
+      return;
+    }
+
     const ok = await confirm({
       title: "Confirm Cancellation",
       message: "Are you sure you want to cancel this order?",
@@ -442,61 +453,69 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
                   </div>
 
                   {/* Action Buttons */}
-                  {!showConfirmButton && <div className="mt-4 flex justify-end gap-2">
-                    <button
-                      onClick={() => setShowRefundModal(true)}
-                      className="px-3 py-1.5 bg-green-500 text-white text-sm hover:bg-green-600 transition"
-                    >
-                      Refund
-                    </button>
-
-                    <button
-                      onClick={handleCancel}
-                      className="px-3 py-1.5 bg-red-500 text-white text-sm hover:bg-red-600 transition"
-                    >
-                      Cancel
-                    </button>
-                  </div>}
-
-                  {!showConfirmButton && (
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => handleReturnOrExchange("return")}
-                        className="px-3 py-1.5 border border-gray-300 bg-white text-sm hover:bg-gray-50 transition"
-                      >
-                        Return
-                      </button>
-                      <button
-                        onClick={() => handleReturnOrExchange("exchange")}
-                        className="px-3 py-1.5 border border-gray-300 bg-white text-sm hover:bg-gray-50 transition"
-                      >
-                        Exchange
-                      </button>
-                      <button
-                        onClick={handleResendInvoice}
-                        className="px-3 py-1.5 border border-gray-300 bg-white text-sm hover:bg-gray-50 transition"
-                      >
-                        Resend Invoice
-                      </button>
-                      <button
-                        onClick={handleAddNote}
-                        className="px-3 py-1.5 border border-gray-300 bg-white text-sm hover:bg-gray-50 transition"
-                      >
-                        Add Note
-                      </button>
-                      <button
-                        onClick={handleFulfillmentHold}
-                        className="px-3 py-1.5 border border-gray-300 bg-white text-sm hover:bg-gray-50 transition"
-                      >
-                        Hold Fulfillment
-                      </button>
-                      <button
-                        onClick={handleFulfillmentRelease}
-                        className="col-span-2 px-3 py-1.5 border border-gray-300 bg-white text-sm hover:bg-gray-50 transition"
-                      >
-                        Release Fulfillment
-                      </button>
+                  {!showConfirmButton && !hasActionableOrder && (
+                    <div className="mt-4 border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+                      Select a valid Shopify order to enable order actions.
                     </div>
+                  )}
+
+                  {!showConfirmButton && hasActionableOrder && (
+                    <>
+                      <div className="mt-4 flex justify-end gap-2">
+                        <button
+                          onClick={() => setShowRefundModal(true)}
+                          className="px-3 py-1.5 bg-green-500 text-white text-sm hover:bg-green-600 transition"
+                        >
+                          Refund
+                        </button>
+
+                        <button
+                          onClick={handleCancel}
+                          className="px-3 py-1.5 bg-red-500 text-white text-sm hover:bg-red-600 transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => handleReturnOrExchange("return")}
+                          className="px-3 py-1.5 border border-gray-300 bg-white text-sm hover:bg-gray-50 transition"
+                        >
+                          Return
+                        </button>
+                        <button
+                          onClick={() => handleReturnOrExchange("exchange")}
+                          className="px-3 py-1.5 border border-gray-300 bg-white text-sm hover:bg-gray-50 transition"
+                        >
+                          Exchange
+                        </button>
+                        <button
+                          onClick={handleResendInvoice}
+                          className="px-3 py-1.5 border border-gray-300 bg-white text-sm hover:bg-gray-50 transition"
+                        >
+                          Resend Invoice
+                        </button>
+                        <button
+                          onClick={handleAddNote}
+                          className="px-3 py-1.5 border border-gray-300 bg-white text-sm hover:bg-gray-50 transition"
+                        >
+                          Add Note
+                        </button>
+                        <button
+                          onClick={handleFulfillmentHold}
+                          className="px-3 py-1.5 border border-gray-300 bg-white text-sm hover:bg-gray-50 transition"
+                        >
+                          Hold Fulfillment
+                        </button>
+                        <button
+                          onClick={handleFulfillmentRelease}
+                          className="col-span-2 px-3 py-1.5 border border-gray-300 bg-white text-sm hover:bg-gray-50 transition"
+                        >
+                          Release Fulfillment
+                        </button>
+                      </div>
+                    </>
                   )}
                 </>
               );
@@ -507,7 +526,7 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
         )}
       </div>
 
-      {showRefundModal && (
+      {showRefundModal && hasActionableOrder && (
         <RefundModal
           order={order}
           messageId={messageId}
