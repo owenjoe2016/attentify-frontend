@@ -109,6 +109,40 @@ const renderOrderActions = (actions?: OrderAction[]) => {
   );
 };
 
+const stringifyApiError = (value: unknown): string => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => stringifyApiError(item))
+      .filter(Boolean)
+      .join(" ");
+  }
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if (typeof record.message === "string") return record.message;
+    if (typeof record.error === "string") return record.error;
+    if (typeof record.errors === "string") return record.errors;
+    return Object.entries(record)
+      .map(([key, item]) => `${key}: ${stringifyApiError(item) || String(item)}`)
+      .join(" ");
+  }
+  return String(value);
+};
+
+const getApiErrorMessage = (error: any, fallback: string) => {
+  const data = error?.response?.data;
+  return (
+    stringifyApiError(data?.details) ||
+    stringifyApiError(data?.detail) ||
+    stringifyApiError(data?.error) ||
+    stringifyApiError(data?.errors) ||
+    stringifyApiError(data?.message) ||
+    error?.message ||
+    fallback
+  );
+};
+
 const OrderInfoCard: React.FC<OrderInfoCardProps> = ({ 
   order, 
   loading, 
@@ -149,13 +183,9 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
       notify("success", response.data?.msg || fallbackMessage);
       onActionCompleted?.();
     } catch (error: any) {
-      const errorMsg =
-        error.response?.data?.error ||
-        error.response?.data?.detail ||
-        error.response?.data?.message ||
-        "Order action failed.";
+      const errorMsg = getApiErrorMessage(error, "Order action failed.");
       console.error("Order action failed:", error.response?.data || error);
-      notify("error", typeof errorMsg === "string" ? errorMsg : "Order action failed.");
+      notify("error", errorMsg);
     }
   };
 
@@ -289,19 +319,7 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
       notify(response.data?.approval_required ? "success" : "success", msg);
       onActionCompleted?.();
     } catch (error: any) {
-      let errorMsg = "Order cancellation failed.";
-
-      if (error.response) {
-        errorMsg =
-          error.response.data?.error ||
-          error.response.data?.errors ||
-          error.response.data?.message ||
-          `Cancellation failed with status ${error.response.status}`;
-      } else if (error.request) {
-        errorMsg = "No response from server. Please check your connection.";
-      } else {
-        errorMsg = error.message;
-      }
+      const errorMsg = getApiErrorMessage(error, "Order cancellation failed.");
 
       console.error("Cancel error:", errorMsg, error.response?.data);
       notify("error", errorMsg);
