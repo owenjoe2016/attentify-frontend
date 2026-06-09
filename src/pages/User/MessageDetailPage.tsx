@@ -15,6 +15,41 @@ import { useNotification } from "../../context/NotificationContext";
 import Comments from "../../components/Comments";
 import { useCompany } from "../../context/CompanyContext";
 
+const buildOrderOptions = (orders: any[], mentionedOrderName?: string) => {
+  const normalizedMentioned = mentionedOrderName?.trim();
+  const mentionedOrders: any[] = [];
+  const otherOrders: any[] = [];
+
+  orders.forEach((item) => {
+    const option = {
+      value: item.name,
+      label:
+        normalizedMentioned && item.name === normalizedMentioned
+          ? `${item.name} - mentioned in message`
+          : item.name,
+    };
+
+    if (normalizedMentioned && item.name === normalizedMentioned) {
+      mentionedOrders.push(option);
+    } else {
+      otherOrders.push(option);
+    }
+  });
+
+  if (!normalizedMentioned) {
+    return otherOrders;
+  }
+
+  return [
+    ...(mentionedOrders.length
+      ? [{ label: "Mentioned in message", options: mentionedOrders }]
+      : []),
+    ...(otherOrders.length
+      ? [{ label: "Other orders from this customer", options: otherOrders }]
+      : []),
+  ];
+};
+
 const MessageDetailPage = () => {
   const { threadId } = useParams<{ threadId: string }>();
   const [message, setMessage] = useState<Message | null>(null);
@@ -25,6 +60,7 @@ const MessageDetailPage = () => {
   const [loadingOrder, setLoadingOrder] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [orderOptions, setOrderOptions] = useState<any>([]);
+  const [mentionedOrderName, setMentionedOrderName] = useState<string>("");
 
   const hasFetchedMessage = useRef(false);
   const hasFetchedOrder = useRef(false);
@@ -44,6 +80,7 @@ const MessageDetailPage = () => {
     setLoading(true);
     setMessage(null);
     setOrderInfo(null);
+    setMentionedOrderName("");
 
     const fetchMessage = async () => {
       if (hasFetchedMessage.current) return;
@@ -77,7 +114,7 @@ const MessageDetailPage = () => {
       if (hasFetchedOrder.current) return;
       hasFetchedOrder.current = true;
       if (!message || !message.messages?.length) {
-        return;
+        return null;
       }
 
       try {
@@ -92,20 +129,25 @@ const MessageDetailPage = () => {
           }
         );
         setOrderInfo(response.data);
+        if (response.data?.order_id) {
+          setMentionedOrderName(response.data.order_id);
+        }
         if (response.data?.msg === 'Email not matched') {
           setReply("Please send inquiry via email from the order.");
         } else {
           setReply(response.data?.msg || "");
         }
+        return response.data;
       } catch (err: any) {
         setError(err.message || "Failed to fetch order info");
         setOrderInfo(null);
+        return null;
       } finally {
         setLoadingOrder(false);
       }
     };
 
-    const fetchOrderOptions = async () => {
+    const fetchOrderOptions = async (mentionedOrderName?: string) => {
       const matches = message?.client?.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g);
       const email = matches?.[0];
 
@@ -126,7 +168,7 @@ const MessageDetailPage = () => {
           },
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
-        setOrderOptions(res.data.orders.map((item: any) => ({ value: item.name, label: item.name })));
+        setOrderOptions(buildOrderOptions(res.data.orders, mentionedOrderName));
       } catch (err) {
         console.error("Failed to fetch orders", err);
         notify("error", "Failed to fetch orders");
@@ -134,8 +176,12 @@ const MessageDetailPage = () => {
     };
 
     if (message) {
-      fetchOrderInfo();
-      fetchOrderOptions();
+      (async () => {
+        const analyzedOrder = await fetchOrderInfo();
+        const mentionedName = analyzedOrder?.order_id || message.order_info?.order_id || "";
+        setMentionedOrderName(mentionedName);
+        await fetchOrderOptions(mentionedName);
+      })();
     }
   }, [message, currentCompanyId]);
 
@@ -253,6 +299,7 @@ const MessageDetailPage = () => {
                 error={error}
                 messageId={message?._id}
                 orderOptions={orderOptions}
+                mentionedOrderName={mentionedOrderName}
                 onOrderNameChanged={(orderNumber) => {
                   (async () => {
                     setLoadingOrder(true);
@@ -287,6 +334,7 @@ const MessageDetailPage = () => {
                   })();
                 }}
                 showConfirmButton={!message?.order_info?.confirmed || message.order_info.order_id !== orderInfo?.order_id}
+                isOrderConfirmed={Boolean(message?.order_info?.confirmed && message.order_info.order_id === orderInfo?.order_id)}
                 onActionCompleted={reloadOrderInfo}
                 onConfirm={async () => {
                   try {

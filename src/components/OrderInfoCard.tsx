@@ -12,8 +12,10 @@ interface OrderInfoCardProps {
   error: string | null;
   messageId?: string;
   orderOptions: any;
+  mentionedOrderName?: string;
   onOrderNameChanged: (orderName: string) => void;
   showConfirmButton: boolean,
+  isOrderConfirmed?: boolean;
   onConfirm: () => void;
   onActionCompleted?: () => void;
 }
@@ -149,8 +151,10 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
   error, 
   messageId,
   orderOptions, 
+  mentionedOrderName,
   onOrderNameChanged, 
   showConfirmButton, 
+  isOrderConfirmed = false,
   onConfirm,  
   onActionCompleted,
 }) => {
@@ -184,6 +188,10 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
         : "";
   const isRefundDisabled = Boolean(refundDisabledReason);
   const isCancelDisabled = Boolean(cancelDisabledReason);
+  const selectedOrderName = order?.shopify_order?.name || order?.order_id || "";
+  const isDifferentFromMentioned = Boolean(
+    mentionedOrderName && selectedOrderName && mentionedOrderName !== selectedOrderName
+  );
 
   const postOrderAction = async (path: string, payload: Record<string, unknown>, fallbackMessage: string) => {
     if (!hasActionableOrder) {
@@ -435,7 +443,7 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
                   <div className="flex justify-between mb-2">
                     <span className="font-semibold">ID:</span>
                     {/* <span>{order.shopify_order.name || "-"}</span> */}
-                    <div className="flex gap-1">
+                    <div className="flex flex-wrap justify-end gap-1">
                       <Select
                         components={{
                           IndicatorSeparator: null,
@@ -462,8 +470,31 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
                       >
                         Confirm
                       </button>}
+                      {isOrderConfirmed && (
+                        <span className="px-2 py-1.5 bg-green-100 text-green-700 text-xs font-semibold">
+                          Confirmed
+                        </span>
+                      )}
                     </div>
                   </div>
+
+                  {mentionedOrderName && (
+                    <div className="mb-3 border border-gray-200 bg-gray-50 p-2 text-xs text-gray-700">
+                      <div>
+                        Mentioned in message: <span className="font-semibold">{mentionedOrderName}</span>
+                      </div>
+                      {showConfirmButton && (
+                        <div className="mt-1 text-yellow-700">
+                          Confirm this order before refunding or cancelling it.
+                        </div>
+                      )}
+                      {isDifferentFromMentioned && (
+                        <div className="mt-1 text-red-700">
+                          This selected order is different from the order mentioned in the message.
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex justify-between mb-2">
                     <span className="font-semibold">Shop:</span>
