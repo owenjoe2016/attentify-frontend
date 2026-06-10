@@ -101,10 +101,10 @@ const renderOrderActions = (actions?: OrderAction[]) => {
             <span className="font-semibold">{formatMoney(action.amount)}</span>
           </div>
           <div className="mt-1 text-gray-600">{formatActionDate(action.created_at)}</div>
-          {action.actor_name && (
+          {action.actor_name && action.actor_name !== "Shopify" && (
             <div className="mt-1 text-gray-600">By {action.actor_name}</div>
           )}
-          {action.note && (
+          {action.note && !action.details?.source && (
             <div className="mt-1 text-gray-700 break-words">{action.note}</div>
           )}
         </div>
