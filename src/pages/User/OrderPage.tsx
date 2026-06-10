@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import Layout from "../../layouts/Layout";
 import { useNotification } from "../../context/NotificationContext";
@@ -269,7 +270,14 @@ export default function OrderPage() {
                 <tbody className="bg-white divide-y divide-gray-100">
                   {orders.map((order) => (
                     <tr key={order.order_id}>
-                      <td className="py-2 px-3">{order.name}</td>
+                      <td className="py-2 px-3">
+                        <Link
+                          to={`/order/${encodeURIComponent(String(order.name || order.order_id))}`}
+                          className="font-medium text-blue-600 hover:text-blue-700"
+                        >
+                          {order.name}
+                        </Link>
+                      </td>
                       <td className="py-2 px-3">{order.shop}</td>
                       <td className="py-2 px-3">
                         {order.created_at ? new Date(order.created_at).toLocaleString() : "-"}

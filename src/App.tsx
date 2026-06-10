@@ -20,6 +20,7 @@ import PhoneAccountPage from "./pages/User/PhoneAccountPage";
 import ShopifyPage from "./pages/User/ShopifyPage";
 import ShopifySuccess from "./pages/User/ShopifySuccess";
 import OrderPage from "./pages/User/OrderPage";
+import OrderDetailPage from "./pages/User/OrderDetailPage";
 import RegisterCompany from "./pages/User/RegisterCompany";
 import InvitationPage from "./pages/User/InvitationPage";
 import AcceptInvite from "./pages/User/AcceptInvite";
@@ -114,6 +115,15 @@ function App() {
                     element={
                       <ProtectedRoute allowedRoles={['company_owner', 'store_owner', 'agent', 'readonly']}>
                         <OrderPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/order/:orderId"
+                    element={
+                      <ProtectedRoute allowedRoles={['company_owner', 'store_owner', 'agent', 'readonly']}>
+                        <OrderDetailPage />
                       </ProtectedRoute>
                     }
                   />
