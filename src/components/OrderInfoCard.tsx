@@ -61,6 +61,8 @@ const actionLabel = (type?: string) => {
       return "Fulfillment hold";
     case "fulfillment_release":
       return "Fulfillment released";
+    case "fulfillment":
+      return "Fulfillment";
     default:
       return type || "Action";
   }
