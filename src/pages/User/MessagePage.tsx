@@ -46,7 +46,7 @@ interface Message {
 type ViewMode = "inbox" | "archived" | "trashed";
 type AssignedFilter = "all" | "assigned" | "unassigned";
 type OrderFilter = "all" | "order" | "other" | "needs_review";
-type SortBy = "started_at" | "last_updated";
+type SortBy = "started_at" | "last_updated" | "created_at";
 type SortOrder = "asc" | "desc";
 
 const modes: [ViewMode, React.ReactNode][] = [
@@ -101,7 +101,7 @@ const defaultMessagePreferences = {
   assignedFilter: "all" as AssignedFilter,
   orderFilter: "all" as OrderFilter,
   statusFilter: "all",
-  sortBy: "last_updated" as SortBy,
+  sortBy: "created_at" as SortBy,
   sortOrder: "desc" as SortOrder,
 };
 
@@ -604,6 +604,7 @@ export default function MessagePage() {
               className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
             >
               <option value="started_at">Ticket date</option>
+              <option value="created_at">Created</option>
               <option value="last_updated">Last updated</option>
             </select>
           </label>
@@ -699,8 +700,8 @@ export default function MessagePage() {
                 <th className="px-6 py-3 w-1/10 text-left">Assigned</th>
                 <th className="px-6 py-3 w-1/10 text-left">Status</th>
                 <th className="px-6 py-3 w-2/10 text-center">
-                  Last Updated
-                </th>
+                      Created At
+                    </th>
               </tr>
             </thead>
             <tbody>
@@ -870,7 +871,7 @@ export default function MessagePage() {
                       )}
                     </td>
                     <td className="px-6 py-4 w-2/10 text-sm text-gray-500 text-center">
-                      {new Date(msg.last_updated).toLocaleDateString()}
+                      {msg.started_at ? new Date(msg.started_at).toLocaleString() : (msg.last_updated ? new Date(msg.last_updated).toLocaleString() : "-")}
 
                       <div className="hidden group-hover:flex absolute right-3 top-1/2 -translate-y-1/2 items-center gap-1">
                         {viewMode !== "trashed" && canMoveMessages && (
