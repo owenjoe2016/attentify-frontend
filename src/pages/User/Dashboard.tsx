@@ -54,7 +54,8 @@ interface DashboardData {
   };
   recent_messages: DashboardMessage[];
   review_messages: DashboardMessage[];
-  pending_approvals: DashboardApproval[];
+  my_pending_approvals: DashboardApproval[];
+  team_pending_approvals: DashboardApproval[];
   recent_activity: AuditLog[];
 }
 
@@ -74,7 +75,8 @@ const emptyDashboard: DashboardData = {
   },
   recent_messages: [],
   review_messages: [],
-  pending_approvals: [],
+  my_pending_approvals: [],
+  team_pending_approvals: [],
   recent_activity: [],
 };
 
@@ -330,17 +332,17 @@ export default function Dashboard() {
 
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
               <Section
-                title="Pending Approvals"
+                title="My Pending Approvals"
                 action={<Link to="/settings" className="text-sm text-blue-600 hover:text-blue-700">Review</Link>}
               >
-                {dashboard.pending_approvals.length === 0 ? (
+                {dashboard.my_pending_approvals.length === 0 ? (
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <CheckCircleIcon className="h-5 w-5 text-green-600" />
                     No pending approvals.
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {dashboard.pending_approvals.map((approval) => (
+                    {dashboard.my_pending_approvals.map((approval) => (
                       <div key={approval._id} className="border border-gray-200 px-3 py-2">
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-sm font-medium text-gray-900">{approvalLabel(approval.type)}</span>
@@ -356,6 +358,30 @@ export default function Dashboard() {
               </Section>
 
               <Section
+                title="Team Pending Approvals"
+                action={<Link to="/settings" className="text-sm text-blue-600 hover:text-blue-700">Review</Link>}
+              >
+                {dashboard.team_pending_approvals.length === 0 ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <CheckCircleIcon className="h-5 w-5 text-green-600" />
+                    No team pending approvals.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {dashboard.team_pending_approvals.map((approval) => (
+                      <div key={approval._id} className="border border-gray-200 px-3 py-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-medium text-gray-900">{approvalLabel(approval.type)}</span>
+                          <span className="text-xs text-gray-500">{formatLocalDate(approval.created_at)}</span>
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500">
+                          {approval.requester_name || approval.requester_email || "Unknown requester"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Section>
                 title="Recent Messages"
                 action={<Link to="/message" className="text-sm text-blue-600 hover:text-blue-700">Open inbox</Link>}
               >
