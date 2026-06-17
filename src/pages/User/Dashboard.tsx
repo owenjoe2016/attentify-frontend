@@ -25,6 +25,7 @@ interface DashboardMessage {
   ticket?: string;
   order_match_status?: string;
   matched_order_name?: string;
+  created_at?: string;
   last_updated?: string;
 }
 
@@ -372,7 +373,7 @@ export default function Dashboard() {
                         </div>
                         <div className="mt-1 flex items-center justify-between gap-3 text-xs text-gray-500">
                           <span className="truncate">{message.client || "Unknown customer"}</span>
-                          <span className="shrink-0">{formatLocalDate(message.last_updated)}</span>
+                          <span className="shrink-0">{formatLocalDate(message.created_at)}</span>
                         </div>
                       </Link>
                     ))}
