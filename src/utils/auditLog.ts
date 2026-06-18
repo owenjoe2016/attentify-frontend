@@ -43,11 +43,16 @@ const detailValue = (details: Record<string, unknown> | undefined, key: string) 
   return typeof value === "string" || typeof value === "number" ? String(value) : "";
 };
 
-export const buildLogText = (log: AuditLog) => {
+export const buildLogText = (log: AuditLog, options: { includeDate?: boolean } = {}) => {
+  const includeDate = options.includeDate ?? true;
   const parts = [
-    `${formatLocalDate(log.created_at)} - User: ${log.actor_name || "Unknown user"} (${roleLabel(log.actor_role)})`,
+    `User: ${log.actor_name || "Unknown user"} (${roleLabel(log.actor_role)})`,
     `Action: ${log.action}`,
   ];
+
+  if (includeDate) {
+    parts.unshift(formatLocalDate(log.created_at));
+  }
 
   if (log.ticket) parts.push(`Ticket: #${log.ticket}`);
   if (log.customer) parts.push(`Customer: ${log.customer}`);

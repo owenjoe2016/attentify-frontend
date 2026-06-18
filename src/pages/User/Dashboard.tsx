@@ -438,7 +438,7 @@ export default function Dashboard() {
                       <div key={log._id} className="flex gap-3 border border-gray-200 px-3 py-2">
                         <ClockIcon className="mt-0.5 h-4 w-4 shrink-0 text-gray-500" />
                         <div className="min-w-0">
-                          <div className="truncate text-sm text-gray-800">{buildLogText(log)}</div>
+                          <div className="truncate text-sm text-gray-800">{buildLogText(log, { includeDate: false })}</div>
                           <div className="mt-1 text-xs text-gray-500">{formatAuditLocalDate(log.created_at)}</div>
                         </div>
                       </div>
