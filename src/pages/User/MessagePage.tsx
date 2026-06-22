@@ -16,6 +16,7 @@ import { useCompany } from "../../context/CompanyContext";
 import { useUser } from "../../context/UserContext";
 import { useConfirmDialog } from "../../context/ConfirmDialogContext";
 import { initSocket } from "../../services/socket";
+import { fetchMessageDetailCached, preloadMessagePage } from "../../utils/messagePreload";
 
 interface ChatEntry {
   sender: string;
@@ -374,6 +375,7 @@ export default function MessagePage() {
 
       setMessages(nextMessages);
       setTotalPages(nextTotalPages);
+      preloadMessagePage(nextMessages);
       messageListCache = {
         params: requestParams,
         messages: nextMessages,
@@ -609,6 +611,12 @@ export default function MessagePage() {
     }
   };
 
+  const prefetchMessage = (id: string) => {
+    fetchMessageDetailCached(id).catch(() => {
+      // Best-effort preload; the detail page handles any real error.
+    });
+  };
+
   const filteredMembers = members.filter(
     (member) =>
       member.name.toLowerCase().includes(memberSearch.toLowerCase()) ||
@@ -814,7 +822,11 @@ export default function MessagePage() {
                       {msg.client}
                     </td>
                     <td className="px-6 py-4 w-4/10 text-blue-700 hover:underline">
-                      <Link to={`/message/${msg._id}`}>
+                      <Link
+                        to={`/message/${msg._id}`}
+                        onMouseEnter={() => prefetchMessage(msg._id)}
+                        onFocus={() => prefetchMessage(msg._id)}
+                      >
                         {msg.title ?? "(no subject)"}
                       </Link>
                     </td>

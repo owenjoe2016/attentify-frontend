@@ -15,6 +15,14 @@ import { useNotification } from "../../context/NotificationContext";
 import Comments from "../../components/Comments";
 import { useCompany } from "../../context/CompanyContext";
 import { initSocket } from "../../services/socket";
+import {
+  fetchMessageDetailCached,
+  fetchOrderInfoCached,
+  getCachedMessageDetail,
+  getCachedOrderInfo,
+  setCachedMessageDetail,
+  setCachedOrderInfo,
+} from "../../utils/messagePreload";
 
 const buildOrderOptions = (orders: any[], mentionedOrderName?: string) => {
   const normalizedMentioned = mentionedOrderName?.trim();
@@ -50,12 +58,14 @@ const buildOrderOptions = (orders: any[], mentionedOrderName?: string) => {
 
 const MessageDetailPage = () => {
   const { threadId } = useParams<{ threadId: string }>();
-  const [message, setMessage] = useState<Message | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cachedMessage = getCachedMessageDetail(threadId);
+  const cachedOrderInfo = getCachedOrderInfo(threadId);
+  const [message, setMessage] = useState<Message | null>(cachedMessage);
+  const [loading, setLoading] = useState(!cachedMessage);
   const [reply, setReply] = useState("");
 
-  const [orderInfo, setOrderInfo] = useState<OrderInfo | null>(null);
-  const [loadingOrder, setLoadingOrder] = useState(true);
+  const [orderInfo, setOrderInfo] = useState<OrderInfo | null>(cachedOrderInfo);
+  const [loadingOrder, setLoadingOrder] = useState(!cachedOrderInfo);
   const [error, setError] = useState<string | null>(null);
   const [orderOptions, setOrderOptions] = useState<any>([]);
   const [mentionedOrderName, setMentionedOrderName] = useState<string>("");
@@ -74,14 +84,9 @@ const MessageDetailPage = () => {
   const reloadMessage = async () => {
     if (!threadId) return;
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL || ""}/message/${threadId}`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
+      const nextMessage = await fetchMessageDetailCached(threadId, { force: true });
       hasFetchedOrder.current = false;
-      setMessage(response.data);
+      setMessage(nextMessage);
     } catch (error) {
       console.error("Error refreshing message:", error);
     }
@@ -91,22 +96,21 @@ const MessageDetailPage = () => {
   useEffect(() => {
     hasFetchedMessage.current = false;
     hasFetchedOrder.current = false;
-    setLoading(true);
-    setMessage(null);
-    setOrderInfo(null);
+    const nextCachedMessage = getCachedMessageDetail(threadId);
+    const nextCachedOrderInfo = getCachedOrderInfo(threadId);
+    setLoading(!nextCachedMessage);
+    setMessage(nextCachedMessage);
+    setOrderInfo(nextCachedOrderInfo);
+    setLoadingOrder(!nextCachedOrderInfo);
     setMentionedOrderName("");
 
     const fetchMessage = async () => {
       if (hasFetchedMessage.current) return;
       hasFetchedMessage.current = true;
       try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL || ""}/message/${threadId}`,
-          {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          }
-        );
-        setMessage(response.data);
+        if (!threadId) return;
+        const nextMessage = await fetchMessageDetailCached(threadId);
+        setMessage(nextMessage);
 
       } catch (error) {
         console.error("Error fetching message:", error);
@@ -149,23 +153,17 @@ const MessageDetailPage = () => {
         setOrderInfo(null);
         setLoadingOrder(true);
         setError(null);
-        const response = await axios.post(
-          (import.meta.env.VITE_API_URL || "") + "/message/analyze",
-          { message_id: message._id },
-          {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          }
-        );
-        setOrderInfo(response.data);
-        if (response.data?.order_id) {
-          setMentionedOrderName(response.data.order_id);
+        const nextOrderInfo = await fetchOrderInfoCached(message._id);
+        setOrderInfo(nextOrderInfo);
+        if (nextOrderInfo?.order_id) {
+          setMentionedOrderName(nextOrderInfo.order_id);
         }
-        if (response.data?.msg === 'Email not matched') {
+        if (nextOrderInfo?.msg === 'Email not matched') {
           setReply("Please send inquiry via email from the order.");
         } else {
-          setReply(response.data?.msg || "");
+          setReply(nextOrderInfo?.msg || "");
         }
-        return response.data;
+        return nextOrderInfo;
       } catch (err: any) {
         setError(err.message || "Failed to fetch order info");
         setOrderInfo(null);
@@ -226,6 +224,7 @@ const MessageDetailPage = () => {
         }
       );
       setOrderInfo(response.data);
+      setCachedOrderInfo(message._id, response.data);
     } catch (err) {
       console.error("Failed to refresh order info", err);
       notify("error", "Failed to refresh order info");
@@ -387,6 +386,15 @@ const MessageDetailPage = () => {
                         };
                       }
                     });
+                    if (message && orderInfo) {
+                      setCachedMessageDetail({
+                        ...message,
+                        order_info: {
+                          ...orderInfo,
+                          confirmed: true,
+                        },
+                      });
+                    }
                     notify("success", "Order confirmed");
                   } catch (err) {
                     console.error("Failed to update message", err);

@@ -1,57 +1,44 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import axios from "axios";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import Layout from "../../layouts/Layout";
 import OrderInfoCard from "../../components/OrderInfoCard";
-import type { OrderInfo, ShopifyOrder } from "../../types";
+import type { OrderInfo } from "../../types";
 import { useCompany } from "../../context/CompanyContext";
 import { useNotification } from "../../context/NotificationContext";
 import { usePageTitle } from "../../context/PageTitleContext";
+import {
+  fetchOrderDetailCached,
+  getCachedOrderDetail,
+} from "../../utils/orderPreload";
 
 export default function OrderDetailPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const { currentCompanyId } = useCompany();
   const { notify } = useNotification();
   const { setTitle } = usePageTitle();
-  const [orderInfo, setOrderInfo] = useState<OrderInfo | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cachedOrderInfo = getCachedOrderDetail(currentCompanyId, orderId);
+  const [orderInfo, setOrderInfo] = useState<OrderInfo | null>(cachedOrderInfo);
+  const [loading, setLoading] = useState(!cachedOrderInfo);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchOrder = useCallback(async () => {
+  const fetchOrder = useCallback(async (options: { force?: boolean } = {}) => {
     if (!orderId || !currentCompanyId) return;
 
-    setLoading(true);
+    const nextCachedOrderInfo = getCachedOrderDetail(currentCompanyId, orderId);
+    if (!options.force && nextCachedOrderInfo) {
+      setOrderInfo(nextCachedOrderInfo);
+      setTitle(`Order ${nextCachedOrderInfo.order_id || orderId}`);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(!orderInfo);
     setError(null);
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL || ""}/shopify/orders`, {
-        params: {
-          search: orderId,
-          page: 1,
-          size: 1,
-          shop: "",
-          company_id: currentCompanyId,
-          include_actions: true,
-        },
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-
-      const order = response.data.orders?.[0] as ShopifyOrder | undefined;
-      if (!order) {
-        setOrderInfo(null);
-        setError("Order not found.");
-        return;
-      }
-
-      setTitle(`Order ${order.name || orderId}`);
-      setOrderInfo({
-        order_id: String(order.name || order.order_id || orderId),
-        type: "order",
-        status: 1,
-        msg: "",
-        confirmed: true,
-        shopify_order: order,
-      });
+      const nextOrderInfo = await fetchOrderDetailCached(currentCompanyId, orderId, options);
+      setTitle(`Order ${nextOrderInfo.order_id || orderId}`);
+      setOrderInfo(nextOrderInfo);
     } catch (err) {
       console.error("Failed to fetch order", err);
       setError("Failed to fetch order.");
@@ -59,7 +46,7 @@ export default function OrderDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentCompanyId, notify, orderId, setTitle]);
+  }, [currentCompanyId, notify, orderId, orderInfo, setTitle]);
 
   useEffect(() => {
     setTitle("Order Detail");
@@ -99,7 +86,7 @@ export default function OrderDetailPage() {
               showConfirmButton={false}
               isOrderConfirmed={false}
               onConfirm={() => {}}
-              onActionCompleted={fetchOrder}
+              onActionCompleted={() => fetchOrder({ force: true })}
             />
           </div>
         </div>

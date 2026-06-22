@@ -5,6 +5,7 @@ import Layout from "../../layouts/Layout";
 import { useNotification } from "../../context/NotificationContext";
 import { usePageTitle } from "../../context/PageTitleContext";
 import { useCompany } from "../../context/CompanyContext";
+import { fetchOrderDetailCached, preloadOrderPage } from "../../utils/orderPreload";
 
 interface Customer {
   id?: string;
@@ -205,6 +206,7 @@ export default function OrderPage() {
 
       setOrders(nextOrders);
       setTotalPages(nextTotalPages);
+      preloadOrderPage(currentCompanyId, nextOrders);
       orderListCache = {
         params: requestParams,
         orders: nextOrders,
@@ -270,6 +272,15 @@ export default function OrderPage() {
       setSortOrder(field === "date" ? "desc" : "asc");
     }
     setCurrentPage(1);
+  };
+
+  const prefetchOrder = (order: Order) => {
+    if (!currentCompanyId) return;
+    const orderId = String(order.name || order.order_id || "");
+    if (!orderId) return;
+    fetchOrderDetailCached(currentCompanyId, orderId).catch(() => {
+      // Best-effort preload; the detail page handles any real error.
+    });
   };
 
   const sortIndicator = (field: SortField) => {
@@ -371,6 +382,8 @@ export default function OrderPage() {
                         <Link
                           to={`/order/${encodeURIComponent(String(order.name || order.order_id))}`}
                           className="font-medium text-blue-600 hover:text-blue-700"
+                          onMouseEnter={() => prefetchOrder(order)}
+                          onFocus={() => prefetchOrder(order)}
                         >
                           {order.name}
                         </Link>
