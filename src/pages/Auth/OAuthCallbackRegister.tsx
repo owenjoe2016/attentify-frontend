@@ -77,9 +77,14 @@ const OAuthCallbackRegister = () => {
     };
 
     const authenticate = async () => {
+      if (code) {
+        tryCodeFallback();
+        return;
+      }
+
       const cookieWorked = await tryCookieAuth();
       if (!cookieWorked) {
-        tryCodeFallback();
+        navigate("/login?error=google_sign_in_failed", { replace: true });
       }
     };
 

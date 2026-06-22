@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useUser } from "../../context/UserContext";
+import { useCompany } from "../../context/CompanyContext";
 
 interface InvitationDetails {
   email: string;
@@ -19,6 +21,8 @@ const AcceptInvitePage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
   const navigate = useNavigate();
+  const { setUser } = useUser();
+  const { setCompanies, setCurrentCompanyId } = useCompany();
 
   useEffect(() => {
     if (!token) {
@@ -56,6 +60,15 @@ const AcceptInvitePage: React.FC = () => {
           },
         }
       );
+      if (res.data?.token && res.data?.user) {
+        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+        setUser(res.data.user);
+        if (res.data.user.companies?.length) {
+          setCompanies(res.data.user.companies);
+          setCurrentCompanyId(res.data.user.company_id || res.data.user.companies[0]?.id || "");
+        }
+      }
       setSuccess(true);
       setTimeout(() => navigate(res.data.redirect_url), 1500);
     } catch (err: any) {

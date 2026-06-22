@@ -6,6 +6,8 @@ import { useCompany } from "../../context/CompanyContext";
 import { jwtDecode } from "jwt-decode"
 import { clearAuthStorage } from "../../utils/authStorage";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+
 type JwtPayload = {
   sub: string;
   user_id: string;
@@ -30,6 +32,12 @@ export default function Login() {
   const [message, setMessage] = useState<string | null>(null);
 
   React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const authError = params.get("error");
+    if (authError) {
+      setError(authError.replace(/_/g, " "));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
     clearAuthStorage();
     setUser(null);
     setCompanies([]);
@@ -82,7 +90,7 @@ export default function Login() {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL || ""}/auth/google/login`;
+    window.location.assign(`${API_URL}/auth/google/login`);
   };
 
   return (

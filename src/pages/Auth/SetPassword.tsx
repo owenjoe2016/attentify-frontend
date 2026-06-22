@@ -1,15 +1,58 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
+import { useUser } from "../../context/UserContext";
+import { useCompany } from "../../context/CompanyContext";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
+type JwtPayload = {
+  user_id: string;
+  name: string;
+  email: string;
+  company_id?: string;
+  role?: string;
+  companies?: any[];
+  redirect_url?: string;
+};
+
 const SetPassword = () => {
   const navigate = useNavigate();
+  const { setUser } = useUser();
+  const { setCompanies, setCurrentCompanyId } = useCompany();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const applySession = (token: string, userData?: any, redirectUrl?: string) => {
+    const decoded = jwtDecode<JwtPayload>(token);
+    const user = userData || {
+      id: decoded.user_id,
+      name: decoded.name,
+      email: decoded.email,
+      company_id: decoded.company_id || "",
+      role: decoded.role || "",
+      companies: decoded.companies || [],
+    };
+
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+    setUser(user);
+
+    if (user.companies?.length) {
+      setCompanies(user.companies);
+      setCurrentCompanyId(user.company_id || user.companies[0]?.id || "");
+    } else {
+      setCompanies([]);
+      setCurrentCompanyId("");
+    }
+
+    navigate(redirectUrl || decoded.redirect_url || (user.company_id ? "/dashboard" : "/register-company"), {
+      replace: true,
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +69,7 @@ const SetPassword = () => {
 
     setLoading(true);
     try {
-      await axios.post(
+      const response = await axios.post(
         `${API_URL}/auth/set-password`,
         { password },
         {
@@ -35,7 +78,11 @@ const SetPassword = () => {
           },
         }
       );
-      navigate("/dashboard", { replace: true });
+      if (response.data?.token) {
+        applySession(response.data.token, response.data.user, response.data.redirect_url);
+        return;
+      }
+      navigate("/register-company", { replace: true });
     } catch (err: any) {
       setError(err?.response?.data?.detail || "Failed to set password. Please try again.");
     } finally {
@@ -82,7 +129,11 @@ const SetPassword = () => {
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => navigate("/dashboard", { replace: true })}
+              onClick={() => {
+                const storedUser = localStorage.getItem("user");
+                const user = storedUser ? JSON.parse(storedUser) : null;
+                navigate(user?.company_id ? "/dashboard" : "/register-company", { replace: true });
+              }}
               className="flex-1 py-2 px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
             >
               Skip for now
