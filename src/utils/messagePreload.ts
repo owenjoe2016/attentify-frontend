@@ -4,7 +4,7 @@ import type { Message, OrderInfo } from "../types";
 const API_URL = import.meta.env.VITE_API_URL || "";
 const DETAIL_TTL_MS = 5 * 60 * 1000;
 const ORDER_INFO_TTL_MS = 5 * 60 * 1000;
-const MAX_DETAIL_PRELOADS = 10;
+const MAX_DETAIL_PRELOADS = 20;
 
 type Cached<T> = {
   value: T;
@@ -77,6 +77,14 @@ export async function fetchMessageDetailCached(messageId: string, options: { for
   return request;
 }
 
+export function seedMessageSummaryCache(message: Partial<Message> & { _id: string }) {
+  if (message.order_info) {
+    setCachedOrderInfo(message._id, message.order_info);
+  }
+  if (!message.messages) return;
+  setCachedMessageDetail(message as Message);
+}
+
 export async function fetchOrderInfoCached(messageId: string): Promise<OrderInfo> {
   const cached = getCachedOrderInfo(messageId);
   if (cached) return cached;
@@ -98,12 +106,13 @@ export async function fetchOrderInfoCached(messageId: string): Promise<OrderInfo
   return request;
 }
 
-export function preloadMessagePage(messages: Array<{ _id: string; order_match_status?: string }>) {
+export function preloadMessagePage(messages: Array<Partial<Message> & { _id: string }>) {
   const candidates = messages.slice(0, MAX_DETAIL_PRELOADS);
 
   window.setTimeout(async () => {
     for (const message of candidates) {
       try {
+        seedMessageSummaryCache(message);
         const detail = await fetchMessageDetailCached(message._id);
         if (detail.order_info) {
           setCachedOrderInfo(detail._id, detail.order_info);

@@ -17,6 +17,7 @@ import { useUser } from "../../context/UserContext";
 import { useConfirmDialog } from "../../context/ConfirmDialogContext";
 import { initSocket } from "../../services/socket";
 import { fetchMessageDetailCached, preloadMessagePage } from "../../utils/messagePreload";
+import type { OrderInfo } from "../../types";
 
 interface ChatEntry {
   sender: string;
@@ -42,6 +43,7 @@ interface Message {
   messages: ChatEntry[];
   assigned_to?: Member | null;
   order_match_status?: "matched" | "possible" | "unmatched" | "not_order" | "unknown";
+  order_info?: OrderInfo;
 }
 
 type ViewMode = "inbox" | "archived" | "trashed";
