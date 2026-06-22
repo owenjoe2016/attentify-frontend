@@ -1,10 +1,23 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 import { useUser } from "../../context/UserContext";
 import { useCompany } from "../../context/CompanyContext";
 import axios from "axios";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+
+type JwtPayload = {
+  sub: string;
+  user_id: string;
+  name: string;
+  email: string;
+  company_id?: string;
+  role?: string;
+  companies?: any;
+  redirect_url?: string;
+  needs_password?: boolean;
+};
 
 const OAuthCallbackLogin = () => {
   const navigate = useNavigate();
@@ -12,37 +25,71 @@ const OAuthCallbackLogin = () => {
   const { setCompanies, setCurrentCompanyId } = useCompany();
 
   useEffect(() => {
-    const fetchAuth = async () => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+
+    const applyUserData = (token: string, userData: any, needsPassword?: boolean) => {
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
+      if (userData.companies?.length) {
+        setCompanies(userData.companies);
+        setCurrentCompanyId(userData.company_id);
+      }
+      // If user has no password, redirect to password setup first
+      if (needsPassword) {
+        navigate("/set-password", { replace: true });
+        return;
+      }
+      const path = userData.role === "admin" ? "/admin/dashboard" : "/dashboard";
+      navigate(path, { replace: true });
+    };
+
+    const tryCookieAuth = async () => {
       try {
-        const response = await axios.get(`${API_URL}/auth/me`, {
-          withCredentials: true,
-        });
+        const response = await axios.get(`${API_URL}/auth/me`, { withCredentials: true });
         const data = response.data;
-
-        // Store token in localStorage for subsequent API calls via Authorization header
-        // (the httpOnly cookie is used only for the initial OAuth exchange)
-        const token = data.token;
-        if (token) {
-          localStorage.setItem("token", token);
+        if (data.token && data.user) {
+          // Decode token to check needs_password since /me response doesn't include it
+          const decoded = jwtDecode<JwtPayload>(data.token);
+          applyUserData(data.token, data.user, decoded.needs_password);
+          return true;
         }
-
-        const user = data.user;
-        setUser(user);
-        localStorage.setItem("user", JSON.stringify(user));
-
-        if (user.companies?.length) {
-          setCompanies(user.companies);
-          setCurrentCompanyId(user.company_id);
-        }
-
-        const redirectPath = data.redirect_url || (user.role === "admin" ? "/admin/dashboard" : "/dashboard");
-        setTimeout(() => navigate(redirectPath), 500);
       } catch {
-        navigate("/login");
+        // Cookie auth failed, will try URL code fallback
+      }
+      return false;
+    };
+
+    const tryCodeFallback = () => {
+      if (!code) {
+        navigate("/login", { replace: true });
+        return;
+      }
+      try {
+        const decoded = jwtDecode<JwtPayload>(code);
+        const userData = {
+          id: decoded.user_id,
+          name: decoded.name,
+          email: decoded.email,
+          company_id: decoded.company_id || "",
+          role: decoded.role || "",
+          companies: decoded.companies || [],
+        };
+        applyUserData(code, userData, decoded.needs_password);
+      } catch {
+        navigate("/login", { replace: true });
       }
     };
 
-    fetchAuth();
+    const authenticate = async () => {
+      const cookieWorked = await tryCookieAuth();
+      if (!cookieWorked) {
+        tryCodeFallback();
+      }
+    };
+
+    authenticate();
   }, [navigate, setUser, setCompanies, setCurrentCompanyId]);
 
   return <p>Loading...</p>;

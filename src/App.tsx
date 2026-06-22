@@ -9,6 +9,7 @@ const OAuthCallbackLogin = lazy(() => import("./pages/Auth/OAuthCallbackLogin"))
 const OAuthCallbackRegister = lazy(() => import("./pages/Auth/OAuthCallbackRegister"));
 const ForgetPassword = lazy(() => import("./pages/Auth/ForgetPassword"));
 const ResetPassword = lazy(() => import("./pages/Auth/ResetPassword"));
+const SetPassword = lazy(() => import("./pages/Auth/SetPassword"));
 
 const Dashboard = lazy(() => import("./pages/User/Dashboard"));
 const MessagePage = lazy(() => import("./pages/User/MessagePage"));
@@ -64,6 +65,7 @@ function App() {
                   <Route path="/oauth/callback/register" element={<OAuthCallbackRegister />} />
                   <Route path="/forget-password" element={<ForgetPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/set-password" element={<SetPassword />} />
                   
                   <Route
                     path="/admin/dashboard"
