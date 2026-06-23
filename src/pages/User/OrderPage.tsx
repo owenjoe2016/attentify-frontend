@@ -139,7 +139,7 @@ export default function OrderPage() {
 
   // Restore scroll after loading completes
   const hasRestoredOrderRef = useRef(false);
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (hasRestoredOrderRef.current || loading || orders.length === 0) return;
     const y = Number(sessionStorage.getItem("orderListScrollY"));
     if (!y) return;
