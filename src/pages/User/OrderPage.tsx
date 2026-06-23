@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import Layout from "../../layouts/Layout";
 import { useNotification } from "../../context/NotificationContext";
@@ -102,7 +102,7 @@ export default function OrderPage() {
 
   const { notify } = useNotification();
   const { setTitle } = usePageTitle();
-  const location = useLocation();
+
   const { currentCompanyId } = useCompany();
 
   useEffect(() => {
@@ -137,29 +137,17 @@ export default function OrderPage() {
     );
   }, [pageSize, selectedShop, sortBy, sortOrder]);
 
-  // Re-fetch when navigating back from detail
-  useEffect(() => {
-    if (location.pathname === "/order") {
-      fetchOrders({ force: true });
-    }
-  }, [location.pathname]);
-
-  // Restore scroll after orders load (runs once, multiple retries)
+  // Restore scroll after loading completes
   const hasRestoredOrderRef = useRef(false);
-  const scrollTargetOrderRef = useRef(0);
   useEffect(() => {
-    const savedY = sessionStorage.getItem("orderListScrollY");
-    if (savedY) scrollTargetOrderRef.current = parseInt(savedY, 10);
-  }, []);
-
-  useEffect(() => {
-    if (!hasRestoredOrderRef.current && !loading && orders.length > 0 && scrollTargetOrderRef.current > 0) {
-      hasRestoredOrderRef.current = true;
-      requestAnimationFrame(() => {
-        window.scroll(0, scrollTargetOrderRef.current);
-      });
-    }
-  }, [loading, orders]);
+    if (hasRestoredOrderRef.current || loading || orders.length === 0) return;
+    const y = Number(sessionStorage.getItem("orderListScrollY"));
+    if (!y) return;
+    hasRestoredOrderRef.current = true;
+    setTimeout(() => {
+      window.scrollTo({ top: y, behavior: "instant" as ScrollBehavior });
+    }, 100);
+  }, [loading, orders.length]);
 
   const fetchOrders = async (options: { force?: boolean } = {}) => {
     if (!currentCompanyId) return;

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Layout from "../../layouts/Layout";
 import {
   MagnifyingGlassIcon,
@@ -311,29 +311,7 @@ export default function MessagePage() {
     };
   }, []);
 
-  // Restore scroll after fully loaded
   const hasRestoredRef = useRef(false);
-  const scrollTargetRef = useRef(0);
-  useEffect(() => {
-    const savedY = sessionStorage.getItem("messageListScrollY");
-    if (savedY) scrollTargetRef.current = parseInt(savedY, 10);
-  }, []);
-
-  useEffect(() => {
-    if (!hasRestoredRef.current && !loading && messages.length > 0 && scrollTargetRef.current > 0) {
-      hasRestoredRef.current = true;
-      const y = scrollTargetRef.current;
-      console.log("[Scroll] Restoring to:", y, "messages:", messages.length, "loading:", loading);
-      // Force layout then scroll
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          window.scroll(0, y);
-        });
-      });
-    } else {
-      console.log("[Scroll] Skip - restored:", hasRestoredRef.current, "loading:", loading, "msgs:", messages.length, "target:", scrollTargetRef.current);
-    }
-  }, [loading, messages]);
 
   const fetchMessages = async (options: { force?: boolean } = {}) => {
     if (!currentCompanyId) return;
@@ -397,19 +375,16 @@ export default function MessagePage() {
     fetchMessages();
   }, [currentCompanyId, currentPage, pageSize, search, viewMode, assignedFilter, orderFilter, effectiveStatusFilter, sortBy, sortOrder]);
 
-  // Re-fetch when navigating back from detail page
+  // Restore scroll after loading completes
   useEffect(() => {
-    if (location.pathname === "/message") {
-      fetchMessages({ force: true });
-    }
-  }, [location.pathname]);
-
-  useEffect(() => {
-    if (statusFilter !== "all" && !statusFilterOptions.includes(statusFilter)) {
-      setStatusFilter("all");
-      setCurrentPage(1);
-    }
-  }, [viewMode, statusFilter, statusFilterOptions]);
+    if (hasRestoredRef.current || loading || messages.length === 0) return;
+    const y = Number(sessionStorage.getItem("messageListScrollY"));
+    if (!y) return;
+    hasRestoredRef.current = true;
+    setTimeout(() => {
+      window.scrollTo({ top: y, behavior: "instant" as ScrollBehavior });
+    }, 100);
+  }, [loading, messages.length]);
 
   useEffect(() => {
     setSelected([]);
@@ -835,11 +810,7 @@ export default function MessagePage() {
                         to={`/message/${msg._id}`}
                         onMouseEnter={() => prefetchMessage(msg._id)}
                         onFocus={() => prefetchMessage(msg._id)}
-                        onClick={() => {
-                          const y = window.scrollY;
-                          console.log("[Scroll] Saving:", y);
-                          sessionStorage.setItem("messageListScrollY", String(y));
-                        }}
+                        onClick={() => sessionStorage.setItem("messageListScrollY", String(window.scrollY))}
                       >
                         {msg.title || "(no subject)"}
                       </Link>
