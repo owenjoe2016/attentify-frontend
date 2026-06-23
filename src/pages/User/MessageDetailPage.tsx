@@ -140,20 +140,21 @@ const MessageDetailPage = () => {
 
   // Analyze email to get order info
   useEffect(() => {
-    //hasFetchedOrder.current = false;
-
     const fetchOrderInfo = async () => {
       if (hasFetchedOrder.current) return;
       hasFetchedOrder.current = true;
       if (!message || !message.messages?.length) {
+        console.log("[OrderInfo] Skip: no message content for", message?._id);
         return null;
       }
+      console.log("[OrderInfo] Analyzing:", message._id);
 
       try {
         setOrderInfo(null);
         setLoadingOrder(true);
         setError(null);
         const nextOrderInfo = await fetchOrderInfoCached(message._id);
+        console.log("[OrderInfo] Result:", message._id, nextOrderInfo?.order_id || "(no order_id)");
         setOrderInfo(nextOrderInfo);
         if (nextOrderInfo?.order_id) {
           setMentionedOrderName(nextOrderInfo.order_id);
