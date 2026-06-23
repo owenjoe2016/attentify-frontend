@@ -126,7 +126,6 @@ type MessageListCache = {
   params: MessageListRequestParams;
   messages: Message[];
   totalPages: number;
-  scrollY: number;
   storedAt: number;
 };
 
@@ -306,34 +305,26 @@ export default function MessagePage() {
   }, [viewMode, currentPage, pageSize, assignedFilter, orderFilter, statusFilter, sortBy, sortOrder]);
 
   useEffect(() => {
-    const cachedList = messageListCache;
-    if (!cachedList || Date.now() - cachedList.storedAt >= MESSAGE_LIST_CACHE_TTL_MS) return;
-
-    const restoreScroll = window.setTimeout(() => {
-      window.scrollTo({ top: cachedList.scrollY, behavior: "auto" });
-    }, 0);
-
-    return () => {
-      window.clearTimeout(restoreScroll);
-    };
-  }, []);
-
-  useEffect(() => {
-    const saveScroll = () => {
-      if (messageListCache) {
-        messageListCache = {
-          ...messageListCache,
-          scrollY: window.scrollY,
-        };
+    // Restore scroll position from sessionStorage
+    const savedY = sessionStorage.getItem("messageListScrollY");
+    if (savedY) {
+      const y = parseInt(savedY, 10);
+      if (y > 0) {
+        // Wait for React to render, then restore
+        const timer = setTimeout(() => {
+          window.scrollTo({ top: y, behavior: "instant" as ScrollBehavior });
+        }, 100);
+        return () => clearTimeout(timer);
       }
-    };
-
-    window.addEventListener("scroll", saveScroll, { passive: true });
-    return () => {
-      saveScroll();
-      window.removeEventListener("scroll", saveScroll);
-    };
+    }
   }, []);
+
+  // Save scroll position before navigating away
+  useEffect(() => {
+    return () => {
+      sessionStorage.setItem("messageListScrollY", String(window.scrollY));
+    };
+  });
 
   const fetchMessages = async (options: { force?: boolean } = {}) => {
     if (!currentCompanyId) return;
@@ -360,11 +351,6 @@ export default function MessagePage() {
     if (!options.force && cacheMatches && cachedList) {
       setMessages(cachedList.messages);
       setTotalPages(cachedList.totalPages);
-      if (cachedList.scrollY > 0) {
-        requestAnimationFrame(() => {
-          window.scrollTo({ top: cachedList.scrollY, behavior: "instant" as ScrollBehavior });
-        });
-      }
       return;
     }
 
@@ -388,16 +374,8 @@ export default function MessagePage() {
         params: requestParams,
         messages: nextMessages,
         totalPages: nextTotalPages,
-        scrollY: messageListCache?.scrollY || 0,
         storedAt: Date.now(),
       };
-      // Restore scroll position after messages are rendered
-      const savedScrollY = messageListCache.scrollY;
-      if (savedScrollY > 0) {
-        requestAnimationFrame(() => {
-          window.scrollTo({ top: savedScrollY, behavior: "instant" as ScrollBehavior });
-        });
-      }
     } catch (error) {
       console.error("Failed to load messages:", error);
       notify("error", "Failed to load messages");
