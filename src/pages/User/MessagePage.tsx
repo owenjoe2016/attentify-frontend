@@ -368,20 +368,15 @@ export default function MessagePage() {
     fetchMessages();
   }, [currentCompanyId, currentPage, pageSize, search, viewMode, assignedFilter, orderFilter, effectiveStatusFilter, sortBy, sortOrder]);
 
-  // Reset restore flag on mount, restore after loading
-  useEffect(() => {
+  // Reset restore flag on mount, restore scroll before paint
+  useLayoutEffect(() => {
     hasRestoredRef.current = false;
-  }, []);
-
-  useEffect(() => {
-    if (hasRestoredRef.current || loading) return;
     const y = (location.state as any)?.scrollY || Number(sessionStorage.getItem("messageListScrollY"));
-    if (!y) return;
-    hasRestoredRef.current = true;
-    setTimeout(() => {
-      window.scrollTo({ top: y, behavior: "auto" });
-    }, 50);
-  }, [loading]);
+    if (y) {
+      hasRestoredRef.current = true;
+      window.scrollTo({ top: y, behavior: "instant" as any });
+    }
+  }, []);
 
   useEffect(() => {
     setSelected([]);

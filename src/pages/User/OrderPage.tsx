@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef } from "react";
+﻿import { useEffect, useLayoutEffect, useState, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import Layout from "../../layouts/Layout";
@@ -138,21 +138,16 @@ export default function OrderPage() {
     );
   }, [pageSize, selectedShop, sortBy, sortOrder]);
 
-  // Reset restore flag on mount, restore after loading
+  // Reset restore flag on mount, restore scroll before paint
   const hasRestoredOrderRef = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     hasRestoredOrderRef.current = false;
-  }, []);
-
-  useEffect(() => {
-    if (hasRestoredOrderRef.current || loading) return;
     const y = (location.state as any)?.scrollY || Number(sessionStorage.getItem("orderListScrollY"));
-    if (!y) return;
-    hasRestoredOrderRef.current = true;
-    setTimeout(() => {
-      window.scrollTo({ top: y, behavior: "auto" });
-    }, 50);
-  }, [loading]);
+    if (y) {
+      hasRestoredOrderRef.current = true;
+      window.scrollTo({ top: y, behavior: "instant" as any });
+    }
+  }, []);
 
   const fetchOrders = async (options: { force?: boolean } = {}) => {
     if (!currentCompanyId) return;
