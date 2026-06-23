@@ -322,9 +322,16 @@ export default function MessagePage() {
   useEffect(() => {
     if (!hasRestoredRef.current && !loading && messages.length > 0 && scrollTargetRef.current > 0) {
       hasRestoredRef.current = true;
+      const y = scrollTargetRef.current;
+      console.log("[Scroll] Restoring to:", y, "messages:", messages.length, "loading:", loading);
+      // Force layout then scroll
       requestAnimationFrame(() => {
-        window.scroll(0, scrollTargetRef.current);
+        requestAnimationFrame(() => {
+          window.scroll(0, y);
+        });
       });
+    } else {
+      console.log("[Scroll] Skip - restored:", hasRestoredRef.current, "loading:", loading, "msgs:", messages.length, "target:", scrollTargetRef.current);
     }
   }, [loading, messages]);
 
@@ -828,7 +835,11 @@ export default function MessagePage() {
                         to={`/message/${msg._id}`}
                         onMouseEnter={() => prefetchMessage(msg._id)}
                         onFocus={() => prefetchMessage(msg._id)}
-                        onClick={() => sessionStorage.setItem("messageListScrollY", String(window.scrollY))}
+                        onClick={() => {
+                          const y = window.scrollY;
+                          console.log("[Scroll] Saving:", y);
+                          sessionStorage.setItem("messageListScrollY", String(y));
+                        }}
                       >
                         {msg.title || "(no subject)"}
                       </Link>
