@@ -53,6 +53,7 @@ export interface OrderInfo {
   msg: string;
   shopify_order?: ShopifyOrder;
   confirmed?: boolean;
+  no_orders?: boolean;
 };
 
 export interface ShopifyAddress {
