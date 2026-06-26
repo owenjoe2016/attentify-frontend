@@ -51,37 +51,39 @@ export default function ShopifyPage() {
     }
   };
 
-  const handleConnect = () => {
+  const buildInstallUrl = () => {
     const user_id = user?.id || "";
     const company_id = currentCompanyId || user?.company_id || "";
     const baseUrl = import.meta.env.VITE_API_URL || "";
 
     if (!user_id || !company_id) {
       notify("error", "Please select a company before connecting Shopify.");
-      return;
+      return "";
     }
 
-    const rawShop = window.prompt("Enter Shopify store domain, e.g. punkcasesnz.myshopify.com");
-    const shop = rawShop?.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
-    if (!shop) return;
-    if (!shop.endsWith(".myshopify.com")) {
-      notify("error", "Please enter a valid .myshopify.com store domain.");
-      return;
-    }
-
-    const oauthUrl = `${baseUrl}/shopify/auth?user_id=${encodeURIComponent(user_id)}&company_id=${encodeURIComponent(company_id)}&shop=${encodeURIComponent(shop)}`;
-    window.location.href = oauthUrl;
+    return `${baseUrl}/shopify/auth?user_id=${encodeURIComponent(user_id)}&company_id=${encodeURIComponent(company_id)}`;
   };
 
-  const handleRemove = async (id: string) => {
+  const handleConnect = () => {
+    const installUrl = buildInstallUrl();
+    if (!installUrl) return;
+    window.location.href = installUrl;
+  };
+
+  const handleDisconnect = async (id: string) => {
     try {
       await axios.delete(`${import.meta.env.VITE_API_URL || ""}/shopify/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-      setShops(prev => prev.filter(shop => shop._id !== id));
+      setShops(prev =>
+        prev.map(shop =>
+          shop._id === id ? { ...shop, status: "disconnected" as const } : shop
+        )
+      );
+      notify("success", "Shopify store disconnected");
     } catch (err) {
-      console.error("Failed to remove Shopify shop", err);
-      notify("error", "Failed to remove Shopify shop");
+      console.error("Failed to disconnect Shopify shop", err);
+      notify("error", "Failed to disconnect Shopify shop");
     }
   };
 
@@ -116,12 +118,21 @@ export default function ShopifyPage() {
                     </p>
                   </div>
                   <RoleWrapper allowedRoles={["company_owner", "store_owner"]} userRole={user?.role || "agent"}>
-                    <button
-                      onClick={() => handleRemove(shop._id)}
-                      className="text-sm text-red-500 hover:underline"
-                    >
-                      Remove
-                    </button>
+                    {shop.status === "connected" ? (
+                      <button
+                        onClick={() => handleDisconnect(shop._id)}
+                        className="text-sm text-red-500 hover:underline"
+                      >
+                        Disconnect
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleConnect}
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        Connect
+                      </button>
+                    )}
                   </RoleWrapper>
                 </li>
               ))}
