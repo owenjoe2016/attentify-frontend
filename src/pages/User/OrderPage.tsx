@@ -6,6 +6,7 @@ import { useNotification } from "../../context/NotificationContext";
 import { usePageTitle } from "../../context/PageTitleContext";
 import { useCompany } from "../../context/CompanyContext";
 import { fetchOrderDetailCached, preloadOrderPage } from "../../utils/orderPreload";
+import { initSocket } from "../../services/socket";
 
 interface Customer {
   id?: string;
@@ -124,6 +125,20 @@ export default function OrderPage() {
 
   useEffect(() => {
     fetchShops();
+  }, [currentCompanyId]);
+
+  // Listen for sync complete events to auto-refresh order list
+  useEffect(() => {
+    const socket = initSocket();
+    const handleSyncComplete = (data: { company_id?: string }) => {
+      if (data.company_id && data.company_id === currentCompanyId) {
+        fetchOrders({ force: true });
+      }
+    };
+    socket.on("shopify_sync_complete", handleSyncComplete);
+    return () => {
+      socket.off("shopify_sync_complete", handleSyncComplete);
+    };
   }, [currentCompanyId]);
 
   useEffect(() => {
