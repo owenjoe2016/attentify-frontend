@@ -51,7 +51,7 @@ export default function ShopifyPage() {
     }
   };
 
-  const buildInstallUrl = () => {
+  const buildInstallUrl = (shop?: string) => {
     const user_id = user?.id || "";
     const company_id = currentCompanyId || user?.company_id || "";
     const baseUrl = import.meta.env.VITE_API_URL || "";
@@ -61,11 +61,25 @@ export default function ShopifyPage() {
       return "";
     }
 
-    return `${baseUrl}/shopify/auth?user_id=${encodeURIComponent(user_id)}&company_id=${encodeURIComponent(company_id)}`;
+    const params = new URLSearchParams({
+      user_id,
+      company_id,
+    });
+    if (shop) {
+      params.set("shop", shop);
+    }
+
+    return `${baseUrl}/shopify/auth?${params.toString()}`;
   };
 
   const handleConnect = () => {
     const installUrl = buildInstallUrl();
+    if (!installUrl) return;
+    window.location.href = installUrl;
+  };
+
+  const handleConnectStore = (shop: string) => {
+    const installUrl = buildInstallUrl(shop);
     if (!installUrl) return;
     window.location.href = installUrl;
   };
@@ -127,7 +141,7 @@ export default function ShopifyPage() {
                       </button>
                     ) : (
                       <button
-                        onClick={handleConnect}
+                        onClick={() => handleConnectStore(shop.shop)}
                         className="text-sm text-blue-600 hover:underline"
                       >
                         Connect
