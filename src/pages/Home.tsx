@@ -44,7 +44,7 @@ export default function Home() {
               className="bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-indigo-600 cursor-pointer border-none"
             >
               Start free trial
-            </a>
+            </button>
           </div>
         </nav>
 
