@@ -36,12 +36,12 @@ export default function Home() {
             <a href="#" className="text-sm font-semibold text-gray-900">Support</a>
           </div>
           <div className="hidden sm:flex sm:flex-1 sm:justify-end sm:items-center">
-            <a 
+            <button
               onClick={() => navigate('/login')}
-              className="mr-4 text-sm font-semibold text-gray-900 cursor-pointer">Log in</a>
-            <a
+              className="mr-4 text-sm font-semibold text-gray-900 cursor-pointer bg-transparent border-none">Log in</button>
+            <button
               onClick={() => navigate('/signup')}
-              className=" bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-indigo-600 cursor-pointer"
+              className="bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-indigo-600 cursor-pointer border-none"
             >
               Start free trial
             </a>
@@ -74,7 +74,7 @@ export default function Home() {
             <a href="#" className="block text-base font-semibold text-gray-900">Pricing</a>
             <a href="#" className="block text-base font-semibold text-gray-900">About Us</a>
             <a href="#" className="block text-base font-semibold text-gray-900">Support</a>
-            <a onClick={() => navigate('/login')} className="block text-base font-semibold text-gray-900 cursor-pointer">Log in</a>
+            <button onClick={() => navigate('/login')} className="block text-base font-semibold text-gray-900 cursor-pointer bg-transparent border-none">Log in</button>
           </div>
         </div>
       </header>
@@ -101,12 +101,12 @@ export default function Home() {
             email, SMS, chat, and voice - all in one hub
           </p>
           <div className="mt-10 flex flex-col sm:flex-row sm:justify-center sm:items-center gap-4">
-            <a
+            <button
               onClick={() => navigate('/signup')}
-              className=" bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow hover:bg-indigo-500 cursor-pointer"
+              className="bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow hover:bg-indigo-500 cursor-pointer border-none"
             >
               Start free trial
-            </a>
+            </button>
             <a href="#" className="text-sm font-semibold text-gray-900">
               Learn more <span aria-hidden="true">-&gt;</span>
             </a>
