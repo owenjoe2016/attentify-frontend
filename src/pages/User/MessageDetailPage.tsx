@@ -24,6 +24,16 @@ import {
   setCachedOrderInfo,
 } from "../../utils/messagePreload";
 
+const ticketStatusList = [
+  "Open",
+  "In Progress",
+  "Pending",
+  "Escalated",
+  "Awaiting Approval",
+  "Resolved",
+  "Canceled",
+];
+
 const buildOrderOptions = (orders: any[], mentionedOrderName?: string) => {
   const normalizedMentioned = mentionedOrderName?.trim();
   const mentionedOrders: any[] = [];
@@ -73,6 +83,7 @@ const MessageDetailPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [orderOptions, setOrderOptions] = useState<any>([]);
   const [mentionedOrderName, setMentionedOrderName] = useState<string>("");
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const hasFetchedMessage = useRef(false);
   const hasFetchedOrder = useRef(false);
@@ -290,6 +301,34 @@ const MessageDetailPage = () => {
     }
   };
 
+  const updateTicketStatus = async (status: string) => {
+    if (!message?._id || status === message.status) return;
+
+    try {
+      setUpdatingStatus(true);
+      const response = await axios.patch(
+        `${import.meta.env.VITE_API_URL || ""}/message/${message._id}`,
+        {
+          field: "status",
+          value: status,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      const nextStatus = response.data?.value || status;
+      const nextMessage = { ...message, status: nextStatus };
+      setMessage(nextMessage);
+      setCachedMessageDetail(nextMessage);
+      notify("success", "Ticket status updated");
+    } catch (err) {
+      console.error("Failed to update ticket status", err);
+      notify("error", "Failed to update ticket status");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   return (
     <Layout>
       {loading && <div className="p-4">Loading...</div>}
@@ -377,6 +416,27 @@ const MessageDetailPage = () => {
           {/* Sidebar */}
           <div className="w-[404px] shrink-0 overflow-y-auto pr-1">
             <div className="flex flex-col space-y-6">
+              {message && (
+                <div className="border border-gray-300 bg-white p-4">
+                  <div className="mb-3 text-lg font-semibold text-gray-900">Ticket</div>
+                  <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                    Status
+                    <select
+                      value={message.status || "Open"}
+                      onChange={(event) => updateTicketStatus(event.target.value)}
+                      disabled={updatingStatus}
+                      className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700 disabled:bg-gray-50 disabled:text-gray-400"
+                    >
+                      {ticketStatusList.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
+
               <OrderInfoCard
                 order={orderInfo}
                 loading={loadingOrder}

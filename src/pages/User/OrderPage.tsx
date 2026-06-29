@@ -40,6 +40,7 @@ interface ShopifyShop {
 
 type SortField = "order" | "date" | "payment_status" | "fulfillment_status";
 type SortOrder = "asc" | "desc";
+type OrderOptionalColumn = "date" | "total" | "paymentStatus" | "fulfillmentStatus";
 
 const ORDER_PREFERENCES_KEY = "attentify.orderListPreferences";
 const ORDER_LIST_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -49,7 +50,20 @@ const defaultOrderPreferences = {
   selectedShop: "",
   sortBy: "date" as SortField,
   sortOrder: "desc" as SortOrder,
+  visibleColumns: {
+    date: true,
+    total: true,
+    paymentStatus: true,
+    fulfillmentStatus: true,
+  } as Record<OrderOptionalColumn, boolean>,
 };
+
+const orderColumnOptions: { key: OrderOptionalColumn; label: string }[] = [
+  { key: "date", label: "Date" },
+  { key: "total", label: "Total" },
+  { key: "paymentStatus", label: "Payment Status" },
+  { key: "fulfillmentStatus", label: "Fulfillment Status" },
+];
 
 type OrderListRequestParams = {
   company_id: string;
@@ -108,6 +122,9 @@ export default function OrderPage() {
   const [totalPages, setTotalPages] = useState(orderListCache?.totalPages || 1);
   const [sortBy, setSortBy] = useState<SortField>(cachedParams?.sort_by || savedPreferences.sortBy);
   const [sortOrder, setSortOrder] = useState<SortOrder>(cachedParams?.sort_order || savedPreferences.sortOrder);
+  const [visibleColumns, setVisibleColumns] = useState<Record<OrderOptionalColumn, boolean>>(
+    savedPreferences.visibleColumns
+  );
   const [syncingOrders, setSyncingOrders] = useState(false);
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
 
@@ -169,9 +186,17 @@ export default function OrderPage() {
         selectedShop,
         sortBy,
         sortOrder,
+        visibleColumns,
       })
     );
-  }, [pageSize, selectedShop, sortBy, sortOrder]);
+  }, [pageSize, selectedShop, sortBy, sortOrder, visibleColumns]);
+
+  const toggleVisibleColumn = (column: OrderOptionalColumn) => {
+    setVisibleColumns((current) => ({
+      ...current,
+      [column]: !current[column],
+    }));
+  };
 
   // Reset restore flag on mount, restore scroll before paint
   const hasRestoredOrderRef = useRef(false);
@@ -372,6 +397,20 @@ export default function OrderPage() {
             </button>
           </div>
 
+          <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-gray-700">
+            {orderColumnOptions.map((column) => (
+              <label key={column.key} className="inline-flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  checked={visibleColumns[column.key]}
+                  onChange={() => toggleVisibleColumn(column.key)}
+                  className="h-4 w-4 border-gray-300 text-blue-600"
+                />
+                {column.label}
+              </label>
+            ))}
+          </div>
+
           {syncingOrders && (
             <div className="mb-4 border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
               Syncing {syncProgress?.shop || "Shopify orders"}
@@ -399,11 +438,11 @@ export default function OrderPage() {
                   <tr className="bg-gray-50">
                     <SortHeader field="order">Order</SortHeader>
                     <th className="py-4 px-3 text-left font-semibold text-gray-600">Shop</th>
-                    <SortHeader field="date">Date</SortHeader>
                     <th className="py-4 px-3 text-left font-semibold text-gray-600">Customer</th>
-                    <th className="py-4 px-3 text-left font-semibold text-gray-600">Total</th>
-                    <SortHeader field="payment_status">Payment Status</SortHeader>
-                    <SortHeader field="fulfillment_status">Fulfillment Status</SortHeader>
+                    {visibleColumns.date && <SortHeader field="date">Date</SortHeader>}
+                    {visibleColumns.total && <th className="py-4 px-3 text-left font-semibold text-gray-600">Total</th>}
+                    {visibleColumns.paymentStatus && <SortHeader field="payment_status">Payment Status</SortHeader>}
+                    {visibleColumns.fulfillmentStatus && <SortHeader field="fulfillment_status">Fulfillment Status</SortHeader>}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
@@ -424,15 +463,15 @@ export default function OrderPage() {
                       </td>
                       <td className="py-2 px-3">{order.shop}</td>
                       <td className="py-2 px-3">
-                        {order.created_at ? new Date(order.created_at).toLocaleString() : "-"}
-                      </td>
-                      <td className="py-2 px-3">
                         {order.customer?.name || "-"}
                         <br />
                         <span className="text-xs text-gray-500">{order.customer?.email}</span>
                       </td>
-                      <td className="py-2 px-3">{order.total_price || "-"}</td>
-                      <td className="py-2 px-3">
+                      {visibleColumns.date && <td className="py-2 px-3">
+                        {order.created_at ? new Date(order.created_at).toLocaleString() : "-"}
+                      </td>}
+                      {visibleColumns.total && <td className="py-2 px-3">{order.total_price || "-"}</td>}
+                      {visibleColumns.paymentStatus && <td className="py-2 px-3">
                         {order.payment_status ? (
                           <span
                             className={
@@ -448,8 +487,8 @@ export default function OrderPage() {
                         ) : (
                           "-"
                         )}
-                      </td>
-                      <td className="py-2 px-3">
+                      </td>}
+                      {visibleColumns.fulfillmentStatus && <td className="py-2 px-3">
                         {order.fulfillment_status ? (
                           <span
                             className={
@@ -465,7 +504,7 @@ export default function OrderPage() {
                         ) : (
                           "-"
                         )}
-                      </td>
+                      </td>}
                     </tr>
                   ))}
                 </tbody>

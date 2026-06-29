@@ -27,7 +27,6 @@ export type Message = {
   last_updated: string;
   status:
     | "Open"
-    | "Assigned"
     | "In Progress"
     | "Pending"
     | "Resolved"

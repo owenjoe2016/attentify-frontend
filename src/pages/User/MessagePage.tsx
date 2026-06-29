@@ -9,6 +9,7 @@ import {
   XMarkIcon,
   ArrowPathIcon,
   ArrowUturnLeftIcon,
+  ChevronDownIcon,
 } from "@heroicons/react/24/outline";
 import axios from "axios";
 import { useNotification } from "../../context/NotificationContext";
@@ -59,6 +60,7 @@ type AssignedFilter = "all" | "assigned" | "unassigned";
 type OrderFilter = "all" | "order" | "other" | "needs_review";
 type SortBy = "started_at" | "last_updated" | "created_at";
 type SortOrder = "asc" | "desc";
+type MessageOptionalColumn = "store" | "order" | "assigned" | "status" | "createdAt";
 
 const modes: [ViewMode, React.ReactNode][] = [
   ["inbox", <InboxIcon className="w-5 h-5" key="inbox" />],
@@ -74,7 +76,6 @@ interface Member {
 
 const statusList = [
   "Open",
-  "Assigned",
   "In Progress",
   "Pending",
   "Resolved",
@@ -85,7 +86,6 @@ const statusList = [
 
 const inboxStatusList = [
   "Open",
-  "Assigned",
   "In Progress",
   "Pending",
   "Escalated",
@@ -116,7 +116,22 @@ const defaultMessagePreferences = {
   statusFilter: "all",
   sortBy: "created_at" as SortBy,
   sortOrder: "desc" as SortOrder,
+  visibleColumns: {
+    store: true,
+    order: true,
+    assigned: true,
+    status: true,
+    createdAt: true,
+  } as Record<MessageOptionalColumn, boolean>,
 };
+
+const messageColumnOptions: { key: MessageOptionalColumn; label: string }[] = [
+  { key: "store", label: "Store" },
+  { key: "order", label: "Order" },
+  { key: "assigned", label: "Assigned" },
+  { key: "status", label: "Status" },
+  { key: "createdAt", label: "Created At" },
+];
 
 type MessageListRequestParams = {
   company_id: string;
@@ -217,6 +232,9 @@ export default function MessagePage() {
   const [statusFilter, setStatusFilter] = useState<string>(cachedParams?.status_filter || savedPreferences.statusFilter);
   const [sortBy, setSortBy] = useState<SortBy>(cachedParams?.sort_by || savedPreferences.sortBy);
   const [sortOrder, setSortOrder] = useState<SortOrder>(cachedParams?.sort_order || savedPreferences.sortOrder);
+  const [visibleColumns, setVisibleColumns] = useState<Record<MessageOptionalColumn, boolean>>(
+    savedPreferences.visibleColumns
+  );
   const [stores, setStores] = useState<Store[]>([]);
   const [totalPages, setTotalPages] = useState(messageListCache?.totalPages || 1);
   const [syncingGmail, setSyncingGmail] = useState(false);
@@ -313,9 +331,17 @@ export default function MessagePage() {
         statusFilter,
         sortBy,
         sortOrder,
+        visibleColumns,
       })
     );
-  }, [viewMode, currentPage, pageSize, assignedFilter, orderFilter, storeFilter, statusFilter, sortBy, sortOrder]);
+  }, [viewMode, currentPage, pageSize, assignedFilter, orderFilter, storeFilter, statusFilter, sortBy, sortOrder, visibleColumns]);
+
+  const toggleVisibleColumn = (column: MessageOptionalColumn) => {
+    setVisibleColumns((current) => ({
+      ...current,
+      [column]: !current[column],
+    }));
+  };
 
   const hasRestoredRef = useRef(false);
   const forceRefreshRef = useRef(false);
@@ -729,6 +755,8 @@ export default function MessagePage() {
       member.name.toLowerCase().includes(memberSearch.toLowerCase()) ||
       member.email.toLowerCase().includes(memberSearch.toLowerCase())
   );
+  const visibleOptionalColumnCount = Object.values(visibleColumns).filter(Boolean).length;
+  const messageEmptyColSpan = 4 + visibleOptionalColumnCount;
 
   const viewLabel: string =
     viewMode === "archived"
@@ -761,7 +789,7 @@ export default function MessagePage() {
           <MagnifyingGlassIcon className="h-6 w-6 text-gray-500 absolute top-3 left-4" />
         </div>
 
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex gap-6">
             {modes.map(([mode, icon]) => (
               <button
@@ -778,6 +806,19 @@ export default function MessagePage() {
               >
                 {icon} {mode.charAt(0).toUpperCase() + mode.slice(1)}
               </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
+            {messageColumnOptions.map((column) => (
+              <label key={column.key} className="inline-flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  checked={visibleColumns[column.key]}
+                  onChange={() => toggleVisibleColumn(column.key)}
+                  className="h-4 w-4 border-gray-300 text-blue-600"
+                />
+                {column.label}
+              </label>
             ))}
           </div>
           <button
@@ -981,21 +1022,21 @@ export default function MessagePage() {
                   />
                 </th>
                 <th className="px-4 py-3 min-w-[150px] text-left">Client</th>
-                <th className="px-4 py-3 min-w-[170px] text-left">Store</th>
+                {visibleColumns.store && <th className="px-4 py-3 min-w-[170px] text-left">Store</th>}
                 <th className="px-4 py-3 min-w-[240px] text-left">Title</th>
                 <th className="px-4 py-3 min-w-[120px] text-left">Ticket</th>
-                <th className="px-4 py-3 min-w-[110px] text-left">Order</th>
-                <th className="px-4 py-3 min-w-[130px] text-left">Assigned</th>
-                <th className="px-4 py-3 min-w-[130px] text-left">Status</th>
-                <th className="px-4 py-3 min-w-[170px] text-center">
+                {visibleColumns.order && <th className="px-4 py-3 min-w-[110px] text-left">Order</th>}
+                {visibleColumns.assigned && <th className="px-4 py-3 min-w-[130px] text-left">Assigned</th>}
+                {visibleColumns.status && <th className="px-4 py-3 min-w-[130px] text-left">Status</th>}
+                {visibleColumns.createdAt && <th className="px-4 py-3 min-w-[170px] text-center">
                       Created At
-                    </th>
+                    </th>}
               </tr>
             </thead>
             <tbody>
               {filteredMessages.length === 0 ? (
                 <tr>
-                  <td className="p-8 text-gray-400 text-center" colSpan={9}>
+                  <td className="p-8 text-gray-400 text-center" colSpan={messageEmptyColSpan}>
                     No {viewLabel.toLowerCase()} emails found.
                   </td>
                 </tr>
@@ -1017,9 +1058,9 @@ export default function MessagePage() {
                     <td className="px-4 py-4 font-medium text-gray-700">
                       {msg.client}
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-600">
+                    {visibleColumns.store && <td className="px-4 py-4 text-sm text-gray-600">
                       {msg.default_store_shop || "No store set"}
-                    </td>
+                    </td>}
                     <td className="px-4 py-4 text-blue-700 hover:underline">
                       <Link
                         to={`/message/${msg._id}`}
@@ -1035,13 +1076,13 @@ export default function MessagePage() {
                     <td className="px-4 py-4 text-blue-700 hover:underline">
                       {msg.ticket?? ""}
                     </td>
-                    <td className="px-4 py-4">
+                    {visibleColumns.order && <td className="px-4 py-4">
                       <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${orderStatusClass(msg.order_match_status)}`}>
                         {orderStatusLabel(msg.order_match_status)}
                       </span>
-                    </td>
+                    </td>}
                     {/* Assigned */}
-                    <td className="px-4 py-4">
+                    {visibleColumns.assigned && <td className="px-4 py-4">
                       {ownerRoles.includes(userRole) ? (
                         <button
                           className="flex items-center gap-2 px-2 py-1 bg-gray-100 hover:bg-blue-50 rounded cursor-pointer"
@@ -1113,19 +1154,28 @@ export default function MessagePage() {
                           </div>
                         </div>
                       )}
-                    </td>
+                    </td>}
                     {/* Status */}
-                    <td className="px-4 py-4">
+                    {visibleColumns.status && <td className="px-4 py-4">
                       {canUpdateStatus ? (
                         // Clickable status button for allowed roles
                         <button
-                          className={`px-3 py-1 text-xs font-semibold rounded ${
-                            msg.status === "Resolved" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+                          className={`inline-flex min-w-[132px] items-center justify-between gap-2 border px-3 py-2 text-xs font-semibold shadow-sm transition hover:-translate-y-px hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+                            msg.status === "Resolved"
+                              ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
+                              : "border-yellow-300 bg-yellow-50 text-yellow-800 hover:bg-yellow-100"
                           }`}
                           onClick={() => handleStatusMenuOpen(msg._id)}
                           type="button"
+                          title="Change status"
+                          aria-haspopup="menu"
+                          aria-expanded={statusMenuId === msg._id}
                         >
-                          {msg.status}
+                          <span>{msg.status}</span>
+                          <span className="inline-flex items-center gap-1 border-l border-current/20 pl-2 text-[10px] uppercase tracking-wide opacity-80">
+                            Change
+                            <ChevronDownIcon className="h-3.5 w-3.5" />
+                          </span>
                         </button>
                       ) : (
                         // Read-only status display for other roles
@@ -1158,7 +1208,9 @@ export default function MessagePage() {
                             {statusList.map((status) => (
                               <button
                                 key={status}
-                                className="block w-full px-4 py-2 text-left hover:bg-blue-50"
+                                className={`block w-full px-4 py-2 text-left text-sm hover:bg-blue-50 ${
+                                  status === msg.status ? "bg-blue-50 font-semibold text-blue-700" : "text-gray-700"
+                                }`}
                                 onClick={() => handleStatusSelect(status, msg)}
                               >
                                 {status}
@@ -1167,8 +1219,8 @@ export default function MessagePage() {
                           </div>
                         </div>
                       )}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-gray-500 text-center">
+                    </td>}
+                    {visibleColumns.createdAt && <td className="px-4 py-4 text-sm text-gray-500 text-center">
                       {msg.started_at ? new Date(msg.started_at).toLocaleString() : (msg.last_updated ? new Date(msg.last_updated).toLocaleString() : "-")}
 
                       <div className="hidden group-hover:flex absolute right-3 top-1/2 -translate-y-1/2 items-center gap-1">
@@ -1200,7 +1252,7 @@ export default function MessagePage() {
                           </button>
                         )}
                       </div>
-                    </td>
+                    </td>}
                   </tr>
                 ))
               )}
