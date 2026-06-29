@@ -8,6 +8,7 @@ import {
   TrashIcon,
   XMarkIcon,
   ArrowPathIcon,
+  ArrowUturnLeftIcon,
 } from "@heroicons/react/24/outline";
 import axios from "axios";
 import { useNotification } from "../../context/NotificationContext";
@@ -574,6 +575,96 @@ export default function MessagePage() {
     }
   };
 
+  const patchMessageField = async (id: string, field: string, value: unknown) => {
+    await axios.patch(
+      `${import.meta.env.VITE_API_URL}/message/${id}`,
+      { field, value },
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }
+    );
+  };
+
+  const handleRestoreFromTrash = async (id: string) => {
+    if (!canTrashMessages) {
+      notify("error", "Restore is not enabled for your account.");
+      return;
+    }
+
+    try {
+      await patchMessageField(id, "trashed", false);
+      notify("success", "Message restored to inbox.");
+      fetchMessages({ force: true });
+    } catch (error) {
+      notify("error", "Failed to restore message. Please try again.");
+    }
+  };
+
+  const handleBulkAction = async (
+    action: "archive" | "unarchive" | "trash" | "restore" | "delete"
+  ) => {
+    if (selected.length === 0) return;
+
+    if ((action === "archive" || action === "unarchive") && !canMoveMessages) {
+      notify("error", "Archive is not enabled for your account.");
+      return;
+    }
+    if ((action === "trash" || action === "restore") && !canTrashMessages) {
+      notify("error", "This action is not enabled for your account.");
+      return;
+    }
+    if (action === "delete" && !canPermanentlyDeleteMessages) {
+      notify("error", "Permanent delete is not enabled for your account.");
+      return;
+    }
+
+    const labelByAction = {
+      archive: "archive",
+      unarchive: "restore to inbox",
+      trash: "move to trash",
+      restore: "restore from trash",
+      delete: "permanently delete",
+    };
+    const confirmed = await confirm({
+      title: "Apply Bulk Action",
+      message: `Are you sure you want to ${labelByAction[action]} ${selected.length} selected message${selected.length === 1 ? "" : "s"}?`,
+      confirmText: action === "delete" ? "Delete Permanently" : "Apply",
+      cancelText: "Cancel",
+    });
+    if (!confirmed) return;
+
+    try {
+      if (action === "delete") {
+        await Promise.all(
+          selected.map((id) =>
+            axios.delete(`${import.meta.env.VITE_API_URL}/message/${id}`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            })
+          )
+        );
+      } else {
+        const payloadByAction = {
+          archive: { field: "archived", value: true },
+          unarchive: { field: "archived", value: false },
+          trash: { field: "trashed", value: true },
+          restore: { field: "trashed", value: false },
+        }[action];
+
+        await Promise.all(
+          selected.map((id) =>
+            patchMessageField(id, payloadByAction.field, payloadByAction.value)
+          )
+        );
+      }
+
+      notify("success", `Updated ${selected.length} message${selected.length === 1 ? "" : "s"}.`);
+      setSelected([]);
+      fetchMessages({ force: true });
+    } catch (error) {
+      notify("error", "Bulk action failed. Please try again.");
+    }
+  };
+
   const handleArchive = async (id: string, archived: boolean) => {
     try {
       await axios.patch(
@@ -750,6 +841,68 @@ export default function MessagePage() {
             </select>
           </label>
         </div>
+
+        {selected.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-blue-200 bg-blue-50 px-4 py-3 text-sm">
+            <span className="font-medium text-blue-900">
+              {selected.length} selected
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {viewMode === "inbox" && canMoveMessages && (
+                <button
+                  type="button"
+                  onClick={() => handleBulkAction("archive")}
+                  className="border border-blue-300 bg-white px-3 py-1.5 text-blue-700 hover:bg-blue-100"
+                >
+                  Archive
+                </button>
+              )}
+              {viewMode === "archived" && canMoveMessages && (
+                <button
+                  type="button"
+                  onClick={() => handleBulkAction("unarchive")}
+                  className="border border-blue-300 bg-white px-3 py-1.5 text-blue-700 hover:bg-blue-100"
+                >
+                  Restore to Inbox
+                </button>
+              )}
+              {viewMode === "trashed" && canTrashMessages && (
+                <button
+                  type="button"
+                  onClick={() => handleBulkAction("restore")}
+                  className="border border-blue-300 bg-white px-3 py-1.5 text-blue-700 hover:bg-blue-100"
+                >
+                  Restore
+                </button>
+              )}
+              {viewMode !== "trashed" && canTrashMessages && (
+                <button
+                  type="button"
+                  onClick={() => handleBulkAction("trash")}
+                  className="border border-red-200 bg-white px-3 py-1.5 text-red-700 hover:bg-red-50"
+                >
+                  Move to Trash
+                </button>
+              )}
+              {viewMode === "trashed" && canPermanentlyDeleteMessages && (
+                <button
+                  type="button"
+                  onClick={() => handleBulkAction("delete")}
+                  className="border border-red-300 bg-white px-3 py-1.5 text-red-700 hover:bg-red-50"
+                >
+                  Delete Permanently
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSelected([])}
+                className="px-3 py-1.5 text-gray-600 hover:text-gray-900"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white min-h-150 border border-gray-300 overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 text-md">
@@ -955,6 +1108,15 @@ export default function MessagePage() {
                       {msg.started_at ? new Date(msg.started_at).toLocaleString() : (msg.last_updated ? new Date(msg.last_updated).toLocaleString() : "-")}
 
                       <div className="hidden group-hover:flex absolute right-3 top-1/2 -translate-y-1/2 items-center gap-1">
+                        {viewMode === "trashed" && canTrashMessages && (
+                          <button
+                            onClick={() => handleRestoreFromTrash(msg._id)}
+                            className="flex items-center justify-center p-2 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                            aria-label="Restore message"
+                          >
+                            <ArrowUturnLeftIcon className="w-6 h-6" />
+                          </button>
+                        )}
                         {viewMode !== "trashed" && canMoveMessages && (
                           <button
                             onClick={() => handleArchive(msg._id, viewMode !== "archived")}
