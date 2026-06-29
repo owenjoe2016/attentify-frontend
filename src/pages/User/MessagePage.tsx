@@ -842,67 +842,73 @@ export default function MessagePage() {
           </label>
         </div>
 
-        {selected.length > 0 && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-blue-200 bg-blue-50 px-4 py-3 text-sm">
-            <span className="font-medium text-blue-900">
-              {selected.length} selected
-            </span>
-            <div className="flex flex-wrap items-center gap-2">
-              {viewMode === "inbox" && canMoveMessages && (
-                <button
-                  type="button"
-                  onClick={() => handleBulkAction("archive")}
-                  className="border border-blue-300 bg-white px-3 py-1.5 text-blue-700 hover:bg-blue-100"
-                >
-                  Archive
-                </button>
-              )}
-              {viewMode === "archived" && canMoveMessages && (
-                <button
-                  type="button"
-                  onClick={() => handleBulkAction("unarchive")}
-                  className="border border-blue-300 bg-white px-3 py-1.5 text-blue-700 hover:bg-blue-100"
-                >
-                  Restore to Inbox
-                </button>
-              )}
-              {viewMode === "trashed" && canTrashMessages && (
-                <button
-                  type="button"
-                  onClick={() => handleBulkAction("restore")}
-                  className="border border-blue-300 bg-white px-3 py-1.5 text-blue-700 hover:bg-blue-100"
-                >
-                  Restore
-                </button>
-              )}
-              {viewMode !== "trashed" && canTrashMessages && (
-                <button
-                  type="button"
-                  onClick={() => handleBulkAction("trash")}
-                  className="border border-red-200 bg-white px-3 py-1.5 text-red-700 hover:bg-red-50"
-                >
-                  Move to Trash
-                </button>
-              )}
-              {viewMode === "trashed" && canPermanentlyDeleteMessages && (
-                <button
-                  type="button"
-                  onClick={() => handleBulkAction("delete")}
-                  className="border border-red-300 bg-white px-3 py-1.5 text-red-700 hover:bg-red-50"
-                >
-                  Delete Permanently
-                </button>
-              )}
+        <div className="mb-4 flex min-h-[54px] flex-wrap items-center justify-between gap-3 border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
+          <span className="font-medium text-gray-700">
+            {selected.length > 0
+              ? `${selected.length} selected`
+              : "No messages selected"}
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {viewMode === "inbox" && canMoveMessages && (
               <button
                 type="button"
-                onClick={() => setSelected([])}
-                className="px-3 py-1.5 text-gray-600 hover:text-gray-900"
+                onClick={() => handleBulkAction("archive")}
+                disabled={selected.length === 0}
+                className="border border-blue-300 bg-white px-3 py-1.5 text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
               >
-                Clear
+                Archive
               </button>
-            </div>
+            )}
+            {viewMode === "archived" && canMoveMessages && (
+              <button
+                type="button"
+                onClick={() => handleBulkAction("unarchive")}
+                disabled={selected.length === 0}
+                className="border border-blue-300 bg-white px-3 py-1.5 text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
+              >
+                Restore to Inbox
+              </button>
+            )}
+            {viewMode === "trashed" && canTrashMessages && (
+              <button
+                type="button"
+                onClick={() => handleBulkAction("restore")}
+                disabled={selected.length === 0}
+                className="border border-blue-300 bg-white px-3 py-1.5 text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
+              >
+                Restore
+              </button>
+            )}
+            {viewMode !== "trashed" && canTrashMessages && (
+              <button
+                type="button"
+                onClick={() => handleBulkAction("trash")}
+                disabled={selected.length === 0}
+                className="border border-red-200 bg-white px-3 py-1.5 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
+              >
+                Move to Trash
+              </button>
+            )}
+            {viewMode === "trashed" && canPermanentlyDeleteMessages && (
+              <button
+                type="button"
+                onClick={() => handleBulkAction("delete")}
+                disabled={selected.length === 0}
+                className="border border-red-300 bg-white px-3 py-1.5 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
+              >
+                Delete Permanently
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setSelected([])}
+              disabled={selected.length === 0}
+              className="px-3 py-1.5 text-gray-600 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-400"
+            >
+              Clear
+            </button>
           </div>
-        )}
+        </div>
 
         <div className="bg-white min-h-150 border border-gray-300 overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 text-md">
