@@ -60,9 +60,9 @@ interface Store {
 type ViewMode = "inbox" | "archived" | "trashed";
 type AssignedFilter = "all" | "assigned" | "unassigned";
 type OrderFilter = "all" | "order" | "other" | "needs_review";
-type SortBy = "started_at" | "last_updated" | "created_at";
+type SortBy = "title" | "ticket" | "started_at" | "last_updated";
 type SortOrder = "asc" | "desc";
-type MessageOptionalColumn = "store" | "order" | "assigned" | "status" | "createdAt";
+type MessageOptionalColumn = "store" | "order" | "assigned" | "status" | "ticketDate" | "lastUpdated";
 
 const modes: [ViewMode, React.ReactNode][] = [
   ["inbox", <InboxIcon className="w-5 h-5" key="inbox" />],
@@ -118,14 +118,15 @@ const defaultMessagePreferences = {
   orderFilter: "all" as OrderFilter,
   storeFilter: "all",
   statusFilter: "all",
-  sortBy: "created_at" as SortBy,
+  sortBy: "started_at" as SortBy,
   sortOrder: "desc" as SortOrder,
   visibleColumns: {
     store: true,
     order: true,
     assigned: true,
     status: true,
-    createdAt: true,
+    ticketDate: true,
+    lastUpdated: true,
   } as Record<MessageOptionalColumn, boolean>,
 };
 
@@ -134,7 +135,8 @@ const messageColumnOptions: { key: MessageOptionalColumn; label: string }[] = [
   { key: "order", label: "Order" },
   { key: "assigned", label: "Assigned" },
   { key: "status", label: "Status" },
-  { key: "createdAt", label: "Created At" },
+  { key: "ticketDate", label: "Ticket Date" },
+  { key: "lastUpdated", label: "Last Updated" },
 ];
 
 type MessageListRequestParams = {
@@ -220,10 +222,23 @@ function loadMessagePreferences() {
   try {
     const stored = localStorage.getItem(MESSAGE_PREFERENCES_KEY);
     if (!stored) return defaultMessagePreferences;
+    const parsed = JSON.parse(stored);
+    const storedColumns = parsed.visibleColumns || {};
 
     return {
       ...defaultMessagePreferences,
-      ...JSON.parse(stored),
+      ...parsed,
+      assignedFilter: "all",
+      orderFilter: "all",
+      storeFilter: "all",
+      statusFilter: "all",
+      sortBy: parsed.sortBy === "created_at" ? "started_at" : (parsed.sortBy || defaultMessagePreferences.sortBy),
+      visibleColumns: {
+        ...defaultMessagePreferences.visibleColumns,
+        ...storedColumns,
+        ticketDate: storedColumns.ticketDate ?? storedColumns.createdAt ?? defaultMessagePreferences.visibleColumns.ticketDate,
+        lastUpdated: storedColumns.lastUpdated ?? defaultMessagePreferences.visibleColumns.lastUpdated,
+      },
     };
   } catch {
     return defaultMessagePreferences;
@@ -371,6 +386,21 @@ export default function MessagePage() {
       ...current,
       [column]: !current[column],
     }));
+  };
+
+  const handleSortHeaderClick = (field: SortBy) => {
+    if (sortBy === field) {
+      setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder(field === "title" || field === "ticket" ? "asc" : "desc");
+    }
+    setCurrentPage(1);
+  };
+
+  const sortIndicator = (field: SortBy) => {
+    if (sortBy !== field) return "";
+    return sortOrder === "asc" ? " ^" : " v";
   };
 
   const hasRestoredRef = useRef(false);
@@ -867,15 +897,6 @@ export default function MessagePage() {
               </label>
             ))}
           </div>
-          <button
-            type="button"
-            onClick={handleSyncGmail}
-            disabled={syncingGmail || !currentCompanyId}
-            className="inline-flex items-center gap-2 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-blue-300"
-          >
-            <ArrowPathIcon className={`h-4 w-4 ${syncingGmail ? "animate-spin" : ""}`} />
-            {syncingGmail ? "Syncing" : "Sync Gmail"}
-          </button>
         </div>
 
         <div className="mb-4 flex shrink-0 flex-wrap items-center gap-3">
@@ -891,37 +912,6 @@ export default function MessagePage() {
               />
               <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
             </div>
-          </label>
-
-          <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
-            Sort by
-            <select
-              value={sortBy}
-              onChange={(e) => {
-                setSortBy(e.target.value as SortBy);
-                setCurrentPage(1);
-              }}
-              className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
-            >
-              <option value="started_at">Ticket date</option>
-              <option value="created_at">Created</option>
-              <option value="last_updated">Last updated</option>
-            </select>
-          </label>
-
-          <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
-            Direction
-            <select
-              value={sortOrder}
-              onChange={(e) => {
-                setSortOrder(e.target.value as SortOrder);
-                setCurrentPage(1);
-              }}
-              className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
-            >
-              <option value="desc">Newest first</option>
-              <option value="asc">Oldest first</option>
-            </select>
           </label>
 
           <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
@@ -1062,12 +1052,21 @@ export default function MessagePage() {
             >
               Clear
             </button>
+            <button
+              type="button"
+              onClick={handleSyncGmail}
+              disabled={syncingGmail || !currentCompanyId}
+              className="inline-flex items-center gap-2 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-blue-300"
+            >
+              <ArrowPathIcon className={`h-4 w-4 ${syncingGmail ? "animate-spin" : ""}`} />
+              {syncingGmail ? "Syncing" : "Sync Gmail"}
+            </button>
           </div>
         </div>
 
         <div
           ref={listScrollRef}
-          className="h-[700px] shrink-0 overflow-auto border border-gray-300 bg-white"
+          className="min-h-0 flex-1 overflow-auto border border-gray-300 bg-white"
         >
           <table className="min-w-full divide-y divide-gray-200 text-md">
             <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
@@ -1087,14 +1086,49 @@ export default function MessagePage() {
                 <th className="w-12 px-3 py-3 text-right text-gray-500">#</th>
                 <th className="px-4 py-3 min-w-[150px] text-left">Client</th>
                 {visibleColumns.store && <th className="px-4 py-3 min-w-[170px] text-left">Store</th>}
-                <th className="px-4 py-3 min-w-[240px] text-left">Title</th>
-                <th className="px-4 py-3 min-w-[120px] text-left">Ticket</th>
+                <th className="px-4 py-3 min-w-[240px] text-left">
+                  <button
+                    type="button"
+                    onClick={() => handleSortHeaderClick("title")}
+                    className="font-semibold text-gray-700 hover:text-blue-700"
+                  >
+                    Title{sortIndicator("title")}
+                  </button>
+                </th>
+                <th className="px-4 py-3 min-w-[120px] text-left">
+                  <button
+                    type="button"
+                    onClick={() => handleSortHeaderClick("ticket")}
+                    className="font-semibold text-gray-700 hover:text-blue-700"
+                  >
+                    Ticket{sortIndicator("ticket")}
+                  </button>
+                </th>
                 {visibleColumns.order && <th className="px-4 py-3 min-w-[110px] text-left">Order</th>}
                 {visibleColumns.assigned && <th className="px-4 py-3 min-w-[130px] text-left">Assigned</th>}
                 {visibleColumns.status && <th className="px-4 py-3 min-w-[130px] text-left">Status</th>}
-                {visibleColumns.createdAt && <th className="px-4 py-3 min-w-[170px] text-center">
-                      Created At
-                    </th>}
+                {visibleColumns.ticketDate && (
+                  <th className="px-4 py-3 min-w-[170px] text-center">
+                    <button
+                      type="button"
+                      onClick={() => handleSortHeaderClick("started_at")}
+                      className="font-semibold text-gray-700 hover:text-blue-700"
+                    >
+                      Ticket Date{sortIndicator("started_at")}
+                    </button>
+                  </th>
+                )}
+                {visibleColumns.lastUpdated && (
+                  <th className="px-4 py-3 min-w-[170px] text-center">
+                    <button
+                      type="button"
+                      onClick={() => handleSortHeaderClick("last_updated")}
+                      className="font-semibold text-gray-700 hover:text-blue-700"
+                    >
+                      Last Updated{sortIndicator("last_updated")}
+                    </button>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -1301,39 +1335,46 @@ export default function MessagePage() {
                         </div>
                       )}
                     </td>}
-                    {visibleColumns.createdAt && <td className="px-4 py-4 text-sm text-gray-500 text-center">
-                      {msg.started_at ? new Date(msg.started_at).toLocaleString() : (msg.last_updated ? new Date(msg.last_updated).toLocaleString() : "-")}
+                    {visibleColumns.ticketDate && (
+                      <td className="px-4 py-4 text-sm text-gray-500 text-center">
+                        {msg.started_at ? new Date(msg.started_at).toLocaleString() : "-"}
+                      </td>
+                    )}
+                    {visibleColumns.lastUpdated && (
+                      <td className="px-4 py-4 text-sm text-gray-500 text-center">
+                        {msg.last_updated ? new Date(msg.last_updated).toLocaleString() : "-"}
 
-                      <div className="hidden group-hover:flex absolute right-3 top-1/2 -translate-y-1/2 items-center gap-1">
-                        {viewMode === "trashed" && canTrashMessages && (
-                          <button
-                            onClick={() => handleRestoreFromTrash(msg._id)}
-                            className="flex items-center justify-center p-2 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition"
-                            aria-label="Restore message"
-                          >
-                            <ArrowUturnLeftIcon className="w-6 h-6" />
-                          </button>
-                        )}
-                        {viewMode !== "trashed" && canMoveMessages && (
-                          <button
-                            onClick={() => handleArchive(msg._id, viewMode !== "archived")}
-                            className="flex items-center justify-center p-2 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition"
-                            aria-label={viewMode === "archived" ? "Unarchive message" : "Archive message"}
-                          >
-                            <ArchiveBoxArrowDownIcon className="w-6 h-6" />
-                          </button>
-                        )}
-                        {(viewMode !== "trashed" ? canTrashMessages : canPermanentlyDeleteMessages) && (
-                          <button
-                            onClick={() => handleDelete(msg._id)}
-                            className="flex items-center justify-center p-2 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
-                            aria-label={viewMode === "trashed" ? "Permanently delete message" : "Delete message"}
-                          >
-                            <TrashIcon className="w-6 h-6" />
-                          </button>
-                        )}
-                      </div>
-                    </td>}
+                        <div className="hidden group-hover:flex absolute right-3 top-1/2 -translate-y-1/2 items-center gap-1">
+                          {viewMode === "trashed" && canTrashMessages && (
+                            <button
+                              onClick={() => handleRestoreFromTrash(msg._id)}
+                              className="flex items-center justify-center p-2 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                              aria-label="Restore message"
+                            >
+                              <ArrowUturnLeftIcon className="w-6 h-6" />
+                            </button>
+                          )}
+                          {viewMode !== "trashed" && canMoveMessages && (
+                            <button
+                              onClick={() => handleArchive(msg._id, viewMode !== "archived")}
+                              className="flex items-center justify-center p-2 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                              aria-label={viewMode === "archived" ? "Unarchive message" : "Archive message"}
+                            >
+                              <ArchiveBoxArrowDownIcon className="w-6 h-6" />
+                            </button>
+                          )}
+                          {(viewMode !== "trashed" ? canTrashMessages : canPermanentlyDeleteMessages) && (
+                            <button
+                              onClick={() => handleDelete(msg._id)}
+                              className="flex items-center justify-center p-2 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                              aria-label={viewMode === "trashed" ? "Permanently delete message" : "Delete message"}
+                            >
+                              <TrashIcon className="w-6 h-6" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
