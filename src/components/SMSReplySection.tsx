@@ -24,8 +24,8 @@ const SMSReplySection: React.FC<SMSReplyProps> = ({
     const textarea = textareaRef.current;
     if (!textarea) return;
     textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 240)}px`;
-    textarea.style.overflowY = textarea.scrollHeight > 240 ? "auto" : "hidden";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 360)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > 360 ? "auto" : "hidden";
   }, [reply]);
 
   // Handle reply submit
@@ -61,7 +61,7 @@ const SMSReplySection: React.FC<SMSReplyProps> = ({
           ref={textareaRef}
           value={reply}
           onChange={(e) => setReply(e.target.value)}
-          className="w-full min-h-[80px] max-h-[240px] p-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          className="w-full min-h-[80px] max-h-[360px] p-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           placeholder="Type your reply here..."
         />
         <button

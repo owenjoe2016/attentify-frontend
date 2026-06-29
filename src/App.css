@@ -10,12 +10,12 @@
 
 .compact-reply-editor .p-editor-content {
   min-height: 96px;
-  max-height: 240px;
+  max-height: 360px;
   overflow-y: auto;
 }
 
 .compact-reply-editor .ql-editor {
   min-height: 96px;
-  max-height: 240px;
+  max-height: 360px;
   overflow-y: auto;
 }

@@ -479,7 +479,7 @@ const MessageDetailPage = () => {
                                   htmlBody={entry.content}
                                   threadId={threadId}
                                   containerClassName="w-full border border-gray-300 bg-white p-4 mb-4"
-                                  bodyMaxHeight={240}
+                                  bodyMaxHeight={360}
                                   //expended={isLast} // <-- only last element expanded
                                   replyFromParent={reply}
                                   OnHandleReply={() => {}}
@@ -494,7 +494,7 @@ const MessageDetailPage = () => {
                                   body={entry.content}
                                   isExpanded={isLast} // <-- only last element expanded
                                   containerClassName="w-full border border-gray-300 bg-white p-6 mb-4"
-                                  bodyMaxHeight={240}
+                                  bodyMaxHeight={360}
                                 />
                               )}
                             </div>

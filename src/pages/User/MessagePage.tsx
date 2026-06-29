@@ -835,17 +835,6 @@ export default function MessagePage() {
   return (
     <Layout>
       <div className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden p-4">
-        <div className="relative mb-6 shrink-0">
-          <input
-            type="text"
-            placeholder="Search"
-            value={search}
-            onChange={onSearchChange}
-            className="w-full px-5 py-3 pl-12 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-md"
-          />
-          <MagnifyingGlassIcon className="h-6 w-6 text-gray-500 absolute top-3 left-4" />
-        </div>
-
         <div className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
           <div className="flex gap-6">
             {modes.map(([mode, icon]) => (
@@ -882,7 +871,7 @@ export default function MessagePage() {
             type="button"
             onClick={handleSyncGmail}
             disabled={syncingGmail || !currentCompanyId}
-            className="inline-flex items-center gap-2 border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            className="inline-flex items-center gap-2 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-blue-300"
           >
             <ArrowPathIcon className={`h-4 w-4 ${syncingGmail ? "animate-spin" : ""}`} />
             {syncingGmail ? "Syncing" : "Sync Gmail"}
@@ -890,6 +879,20 @@ export default function MessagePage() {
         </div>
 
         <div className="mb-4 flex shrink-0 flex-wrap items-center gap-3">
+          <label className="flex min-w-[260px] flex-col gap-1 text-xs font-medium text-gray-600">
+            Search
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search messages"
+                value={search}
+                onChange={onSearchChange}
+                className="w-full border border-gray-300 px-3 py-2 pl-9 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+            </div>
+          </label>
+
           <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
             Sort by
             <select
@@ -1064,7 +1067,7 @@ export default function MessagePage() {
 
         <div
           ref={listScrollRef}
-          className="min-h-0 flex-1 overflow-auto border border-gray-300 bg-white"
+          className="h-[700px] shrink-0 overflow-auto border border-gray-300 bg-white"
         >
           <table className="min-w-full divide-y divide-gray-200 text-md">
             <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
