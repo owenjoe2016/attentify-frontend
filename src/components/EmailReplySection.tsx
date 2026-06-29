@@ -52,11 +52,10 @@ const EmailReplySection: React.FC<EmailReplyProps> = ({
     <div className="mt-4">
       <div className="bg-white border border-gray-300 p-4">
         <h3 className="text-lg font-semibold mb-2">Reply</h3>
-        <div data-color-mode="light">
+        <div className="compact-reply-editor" data-color-mode="light">
           <Editor
             value={reply}
             onTextChange={(e: any) => setReply(e.htmlValue)}
-            style={{ height: '320px' }}
           />
         </div>
 

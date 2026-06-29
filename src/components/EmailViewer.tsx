@@ -10,6 +10,7 @@ type EmailViewerProps = {
   htmlBody: string;
   threadId?: string;
   containerClassName?: string;
+  bodyMaxHeight?: number;
   //expended?: boolean;
   replyFromParent?: string;
   OnHandleReply?: () => void;
@@ -42,9 +43,10 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
   date,
   htmlBody,
   containerClassName = "bg-white border border-gray-300 p-4 max-w-5xl mx-auto mb-4",
+  bodyMaxHeight,
   //expended,
 }) => {
-  const [iframeHeight, setIframeHeight] = React.useState(600);
+  const [iframeHeight, setIframeHeight] = React.useState(bodyMaxHeight ? 72 : 600);
   const emailDocument = React.useMemo(() => {
     const executableContentRemoved = removeExecutableEmailContent(htmlBody || "");
     const sanitizedHtml = DOMPurify.sanitize(executableContentRemoved, {
@@ -90,13 +92,15 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
   const handleIframeLoad = (event: React.SyntheticEvent<HTMLIFrameElement>) => {
     try {
       const doc = event.currentTarget.contentDocument;
+      const minHeight = bodyMaxHeight ? 72 : 240;
+      const maxHeight = bodyMaxHeight || 4000;
       const nextHeight = Math.max(
-        240,
+        minHeight,
         doc?.documentElement.scrollHeight || doc?.body.scrollHeight || 600
       );
-      setIframeHeight(Math.min(nextHeight, 4000));
+      setIframeHeight(Math.min(nextHeight, maxHeight));
     } catch {
-      setIframeHeight(600);
+      setIframeHeight(bodyMaxHeight ? 72 : 600);
     }
   };
 
@@ -122,13 +126,16 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
         </div>
       </header>
 
-      <section className="max-w-none">
+      <section
+        className="max-w-none"
+        style={bodyMaxHeight ? { maxHeight: bodyMaxHeight, overflowY: "auto" } : undefined}
+      >
         <iframe
           title={`Email body: ${subject}`}
           className="w-full border-0 bg-white"
           srcDoc={emailDocument}
           referrerPolicy="no-referrer"
-          style={{ height: iframeHeight }}
+          style={{ height: bodyMaxHeight ? Math.min(iframeHeight, bodyMaxHeight) : iframeHeight }}
           onLoad={handleIframeLoad}
         />
       </section>

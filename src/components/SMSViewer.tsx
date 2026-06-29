@@ -7,6 +7,7 @@ type SMSViewerProps = {
   body: string;
   isExpanded?: boolean;
   containerClassName?: string;
+  bodyMaxHeight?: number;
 };
 
 const SMSViewer: React.FC<SMSViewerProps> = ({
@@ -15,7 +16,8 @@ const SMSViewer: React.FC<SMSViewerProps> = ({
   date,
   body,
   isExpanded,
-  containerClassName = "bg-white shadow-md p-6 max-w-5xl mx-auto"
+  containerClassName = "bg-white shadow-md p-6 max-w-5xl mx-auto",
+  bodyMaxHeight
 }) => {
 
   return (
@@ -58,7 +60,10 @@ const SMSViewer: React.FC<SMSViewerProps> = ({
               </div>
             </div>
           </header>
-          <section className="prose max-w-none">
+          <section
+            className="prose max-w-none"
+            style={bodyMaxHeight ? { maxHeight: bodyMaxHeight, overflowY: "auto" } : undefined}
+          >
             <div className="whitespace-pre-wrap">{body}</div>
           </section>
         </div>

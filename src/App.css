@@ -3,3 +3,19 @@
 #root {
   margin: 0 auto;
 }
+
+.compact-reply-editor .p-editor-container {
+  border-radius: 0;
+}
+
+.compact-reply-editor .p-editor-content {
+  min-height: 96px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.compact-reply-editor .ql-editor {
+  min-height: 96px;
+  max-height: 240px;
+  overflow-y: auto;
+}

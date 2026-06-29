@@ -251,6 +251,7 @@ export default function MessagePage() {
   const { user } = useUser();
   const location = useLocation();
   const menuRef = useRef<HTMLDivElement>(null);
+  const listScrollRef = useRef<HTMLDivElement>(null);
 
   const [search, setSearch] = useState<string>(cachedParams?.search || "");
   const [currentPage, setCurrentPage] = useState<number>(cachedParams?.page || savedPreferences.currentPage);
@@ -474,7 +475,11 @@ export default function MessagePage() {
     if (y) {
       hasRestoredRef.current = true;
       forceRefreshRef.current = true;
-      window.scrollTo({ top: y, behavior: "instant" as any });
+      requestAnimationFrame(() => {
+        if (listScrollRef.current) {
+          listScrollRef.current.scrollTop = y;
+        }
+      });
     }
   }, []);
 
@@ -808,7 +813,7 @@ export default function MessagePage() {
       member.email.toLowerCase().includes(memberSearch.toLowerCase())
   );
   const visibleOptionalColumnCount = Object.values(visibleColumns).filter(Boolean).length;
-  const messageEmptyColSpan = 4 + visibleOptionalColumnCount;
+  const messageEmptyColSpan = 5 + visibleOptionalColumnCount;
 
   const viewLabel: string =
     viewMode === "archived"
@@ -829,8 +834,8 @@ export default function MessagePage() {
 
   return (
     <Layout>
-      <div className="p-4">
-        <div className="relative mb-6">
+      <div className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden p-4">
+        <div className="relative mb-6 shrink-0">
           <input
             type="text"
             placeholder="Search"
@@ -841,7 +846,7 @@ export default function MessagePage() {
           <MagnifyingGlassIcon className="h-6 w-6 text-gray-500 absolute top-3 left-4" />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
           <div className="flex gap-6">
             {modes.map(([mode, icon]) => (
               <button
@@ -884,7 +889,7 @@ export default function MessagePage() {
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="mb-4 flex shrink-0 flex-wrap items-center gap-3">
           <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
             Sort by
             <select
@@ -989,7 +994,7 @@ export default function MessagePage() {
           </label>
         </div>
 
-        <div className="mb-4 flex min-h-[54px] flex-wrap items-center justify-between gap-3 border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
+        <div className="mb-4 flex min-h-[54px] shrink-0 flex-wrap items-center justify-between gap-3 border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
           <span className="font-medium text-gray-700">
             {selected.length > 0
               ? `${selected.length} selected`
@@ -1057,9 +1062,12 @@ export default function MessagePage() {
           </div>
         </div>
 
-        <div className="bg-white min-h-150 border border-gray-300 overflow-x-auto">
+        <div
+          ref={listScrollRef}
+          className="min-h-0 flex-1 overflow-auto border border-gray-300 bg-white"
+        >
           <table className="min-w-full divide-y divide-gray-200 text-md">
-            <thead className="bg-gray-50">
+            <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
               <tr>
                 <th className="px-6 py-3 w-14">
                   <input
@@ -1073,6 +1081,7 @@ export default function MessagePage() {
                     aria-label="Select all messages"
                   />
                 </th>
+                <th className="w-12 px-3 py-3 text-right text-gray-500">#</th>
                 <th className="px-4 py-3 min-w-[150px] text-left">Client</th>
                 {visibleColumns.store && <th className="px-4 py-3 min-w-[170px] text-left">Store</th>}
                 <th className="px-4 py-3 min-w-[240px] text-left">Title</th>
@@ -1093,7 +1102,7 @@ export default function MessagePage() {
                   </td>
                 </tr>
               ) : (
-                filteredMessages.map((msg) => (
+                filteredMessages.map((msg, index) => (
                   <tr
                     key={msg._id}
                     className="group hover:bg-gray-50 transition-all border-b border-gray-100 relative"
@@ -1106,6 +1115,9 @@ export default function MessagePage() {
                         className="h-5 w-5 text-blue-600 border-gray-300 cursor-pointer"
                         aria-label={`Select message ${msg.title || msg._id}`}
                       />
+                    </td>
+                    <td className="px-3 py-4 text-right text-sm font-medium text-gray-400">
+                      {(currentPage - 1) * pageSize + index + 1}
                     </td>
                     <td className="px-4 py-4 font-medium text-gray-700">
                       {msg.client}
@@ -1131,11 +1143,11 @@ export default function MessagePage() {
                     <td className="px-4 py-4 text-blue-700 hover:underline">
                       <Link
                         to={`/message/${msg._id}`}
-                        state={{ scrollY: window.scrollY }}
+                        state={{ scrollY: listScrollRef.current?.scrollTop || 0 }}
                         onMouseEnter={() => prefetchMessage(msg._id)}
                         onFocus={() => prefetchMessage(msg._id)}
-                        onMouseDown={() => sessionStorage.setItem("messageListScrollY", String(window.scrollY))}
-                        onClick={() => sessionStorage.setItem("messageListScrollY", String(window.scrollY))}
+                        onMouseDown={() => sessionStorage.setItem("messageListScrollY", String(listScrollRef.current?.scrollTop || 0))}
+                        onClick={() => sessionStorage.setItem("messageListScrollY", String(listScrollRef.current?.scrollTop || 0))}
                       >
                         {msg.title || "(no subject)"}
                       </Link>
@@ -1327,7 +1339,7 @@ export default function MessagePage() {
         </div>
 
         {/* Pagination */}
-            <div className="flex justify-between items-center mt-4">
+            <div className="mt-4 flex shrink-0 items-center justify-between">
               <div>
                 <button
                   onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
