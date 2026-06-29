@@ -15,6 +15,7 @@ interface OrderInfoCardProps {
   mentionedOrderName?: string;
   readOnlyOrderSelection?: boolean;
   layout?: "sidebar" | "detail";
+  section?: "all" | "customer" | "order";
   onOrderNameChanged: (orderName: string) => void;
   showConfirmButton: boolean,
   isOrderConfirmed?: boolean;
@@ -207,6 +208,7 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
   mentionedOrderName,
   readOnlyOrderSelection = false,
   layout = "sidebar",
+  section = "all",
   onOrderNameChanged, 
   showConfirmButton, 
   isOrderConfirmed = false,
@@ -250,6 +252,8 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
   const cardClassName = layout === "detail"
     ? "w-full border border-gray-300 bg-white p-5"
     : "w-[380px] border border-gray-300 bg-white p-4";
+  const showCustomerSection = section === "all" || section === "customer";
+  const showOrderSection = section === "all" || section === "order";
 
   const postOrderAction = async (path: string, payload: Record<string, unknown>, fallbackMessage: string) => {
     if (!hasActionableOrder) {
@@ -433,17 +437,39 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
     }
   };
 
-  if (loading) return <div className="text-gray-500">Loading...</div>;
-  if (error) return <div className="text-red-500">{error}</div>;
-  if (!order) return <div className="text-gray-500">No order information found.</div>;
+  if (loading) {
+    return (
+      <div className={cardClassName}>
+        <h2 className="mb-4 text-lg font-bold">{showCustomerSection && !showOrderSection ? "Customer" : "Order"}</h2>
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className={cardClassName}>
+        <h2 className="mb-4 text-lg font-bold">{showCustomerSection && !showOrderSection ? "Customer" : "Order"}</h2>
+        <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
+  if (!order) {
+    return (
+      <div className={cardClassName}>
+        <h2 className="mb-4 text-lg font-bold">{showCustomerSection && !showOrderSection ? "Customer" : "Order"}</h2>
+        <div className="text-gray-500">
+          {showCustomerSection && !showOrderSection ? "No customer information found." : "No order information found."}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
-    <div className={cardClassName}>
+    {showCustomerSection && (
+      <div className={cardClassName}>
         <h2 className="text-lg font-bold mb-5">Customer</h2>
-        {order &&
-          order.shopify_order &&
-          order.shopify_order.customer && (
+        {order.shopify_order?.customer ? (
             <>
               <div className="flex justify-between mb-2">
                 <span className="font-semibold">Name:</span>
@@ -467,9 +493,13 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
                 </span>
               </div>
             </>
+        ) : (
+          <div className="text-gray-500">No customer information found.</div>
         )}
       </div>
+    )}
 
+    {showOrderSection && (
       <div className={cardClassName}>
         <h3 className="text-lg font-semibold mb-4">Order</h3>
 
@@ -700,6 +730,7 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
           <div className="mt-4 text-gray-500">{order.msg}</div>
         )}
       </div>
+    )}
 
       {showRefundModal && hasActionableOrder && (
         <RefundModal

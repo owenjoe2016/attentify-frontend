@@ -394,48 +394,133 @@ const MessageDetailPage = () => {
             </Link>
           </div>
 
-          <div className="min-h-0 w-full flex-1 overflow-y-auto pr-2">
-            <div className="mx-auto flex max-w-6xl flex-col gap-6">
-              {message && (
-                <div className="border border-gray-300 bg-white p-4">
-                  <div className="mb-3 text-lg font-semibold text-gray-900">Ticket</div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
-                      Status
-                      <select
-                        value={message.status || "Open"}
-                        onChange={(event) => updateTicketStatus(event.target.value)}
-                        disabled={updatingStatus}
-                        className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700 disabled:bg-gray-50 disabled:text-gray-400"
-                      >
-                        {ticketStatusList.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    {(message.order_matching_store_ids?.length || 0) > 1 && (
+          <div className="flex min-h-0 w-full flex-1 gap-6 overflow-hidden">
+            <div className="min-w-0 flex-1 overflow-y-auto pr-2">
+              <div className="flex flex-col gap-6">
+                {message && (
+                  <div className="border border-gray-300 bg-white p-4">
+                    <div className="mb-3 text-lg font-semibold text-gray-900">Ticket</div>
+                    <div className="grid gap-4 md:grid-cols-2">
                       <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
-                        Store
+                        Status
                         <select
-                          value={message.default_store_id || ""}
-                          onChange={(event) => updateMessageStore(event.target.value)}
-                          className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
+                          value={message.status || "Open"}
+                          onChange={(event) => updateTicketStatus(event.target.value)}
+                          disabled={updatingStatus}
+                          className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700 disabled:bg-gray-50 disabled:text-gray-400"
                         >
-                          <option value="">Auto / Review</option>
-                          {(message.order_matching_store_ids || []).map((storeId, index) => (
-                            <option key={storeId} value={storeId}>
-                              {message.order_matching_store_shops?.[index] || storeId}
+                          {ticketStatusList.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
                             </option>
                           ))}
                         </select>
                       </label>
+                      {(message.order_matching_store_ids?.length || 0) > 1 && (
+                        <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                          Store
+                          <select
+                            value={message.default_store_id || ""}
+                            onChange={(event) => updateMessageStore(event.target.value)}
+                            className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
+                          >
+                            <option value="">Auto / Review</option>
+                            {(message.order_matching_store_ids || []).map((storeId, index) => (
+                              <option key={storeId} value={storeId}>
+                                {message.order_matching_store_shops?.[index] || storeId}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <OrderInfoCard
+                  order={orderInfo}
+                  loading={loadingOrder}
+                  error={error}
+                  messageId={message?._id}
+                  orderOptions={orderOptions}
+                  mentionedOrderName={mentionedOrderName}
+                  section="customer"
+                  layout="detail"
+                  onOrderNameChanged={() => {}}
+                  showConfirmButton={false}
+                  isOrderConfirmed={false}
+                  onActionCompleted={reloadOrderInfo}
+                  onConfirm={() => {}}
+                />
+
+                <div>
+                {message ? (
+                  <div className="space-y-2">
+                    {message.messages.map((entry, index) => {
+                      const isLast = index === message.messages.length - 1;
+
+                      return (
+                        <div
+                          key={index}
+                          className={`flex ${
+                            entry.sender === "client" ? "justify-start" : "justify-end"
+                          }`}
+                        >
+                          <div className="w-full">
+                            <div className="mb-2">
+                              {entry.message_type === "html" && (
+                                <EmailViewer
+                                  subject={entry.title || "No Subject"}
+                                  from={entry.metadata?.from || "Unknown"}
+                                  to={entry.metadata?.to || "Unknown"}
+                                  date={entry.timestamp}
+                                  htmlBody={entry.content}
+                                  threadId={threadId}
+                                  //expended={isLast} // <-- only last element expanded
+                                  replyFromParent={reply}
+                                  OnHandleReply={() => {}}
+                                />
+                              )}
+
+                              {entry.message_type === "text" && (
+                                <SMSViewer
+                                  from={entry.metadata?.from || "Unknown"}
+                                  to={entry.metadata?.to || "Unknown"}
+                                  date={entry.timestamp}
+                                  body={entry.content}
+                                  isExpanded={isLast} // <-- only last element expanded
+                                />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {message.channel === "email" && (
+                      <EmailReplySection
+                        threadId={threadId}
+                        replyFromParent={reply}
+                      />
+                    )}
+
+                    {message.channel === "sms" && (
+                      <SMSReplySection
+                        threadId={threadId}
+                        replyFromParent={reply}
+                      />
                     )}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="p-6 text-red-600">Message not found</div>
+                )}
 
+                <Comments messageId={message?._id} pComments={message?.comments} />
+                </div>
+              </div>
+            </div>
+
+            <div className="w-[404px] shrink-0 overflow-y-auto pr-1">
               <OrderInfoCard
                 order={orderInfo}
                 loading={loadingOrder}
@@ -443,6 +528,7 @@ const MessageDetailPage = () => {
                 messageId={message?._id}
                 orderOptions={orderOptions}
                 mentionedOrderName={mentionedOrderName}
+                section="order"
                 onOrderNameChanged={(orderNumber) => {
                   (async () => {
                     setLoadingOrder(true);
@@ -519,71 +605,6 @@ const MessageDetailPage = () => {
                   }
                 }}
               />
-
-              <div>
-                {message ? (
-                  <div className="space-y-2">
-                    {message.messages.map((entry, index) => {
-                      const isLast = index === message.messages.length - 1;
-
-                      return (
-                        <div
-                          key={index}
-                          className={`flex ${
-                            entry.sender === "client" ? "justify-start" : "justify-end"
-                          }`}
-                        >
-                          <div className="w-full">
-                            <div className="mb-2">
-                              {entry.message_type === "html" && (
-                                <EmailViewer
-                                  subject={entry.title || "No Subject"}
-                                  from={entry.metadata?.from || "Unknown"}
-                                  to={entry.metadata?.to || "Unknown"}
-                                  date={entry.timestamp}
-                                  htmlBody={entry.content}
-                                  threadId={threadId}
-                                  //expended={isLast} // <-- only last element expanded
-                                  replyFromParent={reply}
-                                  OnHandleReply={() => {}}
-                                />
-                              )}
-
-                              {entry.message_type === "text" && (
-                                <SMSViewer
-                                  from={entry.metadata?.from || "Unknown"}
-                                  to={entry.metadata?.to || "Unknown"}
-                                  date={entry.timestamp}
-                                  body={entry.content}
-                                  isExpanded={isLast} // <-- only last element expanded
-                                />
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {message.channel === "email" && (
-                      <EmailReplySection
-                        threadId={threadId}
-                        replyFromParent={reply}
-                      />
-                    )}
-
-                    {message.channel === "sms" && (
-                      <SMSReplySection
-                        threadId={threadId}
-                        replyFromParent={reply}
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-6 text-red-600">Message not found</div>
-                )}
-
-                <Comments messageId={message?._id} pComments={message?.comments} />
-              </div>
             </div>
           </div>
         </div>
