@@ -63,12 +63,13 @@ const MessageDetailPage = () => {
   const { threadId } = useParams<{ threadId: string }>();
   const cachedMessage = getCachedMessageDetail(threadId);
   const cachedOrderInfo = getCachedOrderInfo(threadId);
+  const initialOrderInfo = hasSavedOrderResult(cachedOrderInfo) ? cachedOrderInfo : null;
   const [message, setMessage] = useState<Message | null>(cachedMessage);
   const [loading, setLoading] = useState(!cachedMessage);
   const [reply, setReply] = useState("");
 
-  const [orderInfo, setOrderInfo] = useState<OrderInfo | null>(cachedOrderInfo);
-  const [loadingOrder, setLoadingOrder] = useState(!cachedOrderInfo);
+  const [orderInfo, setOrderInfo] = useState<OrderInfo | null>(initialOrderInfo);
+  const [loadingOrder, setLoadingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orderOptions, setOrderOptions] = useState<any>([]);
   const [mentionedOrderName, setMentionedOrderName] = useState<string>("");
@@ -100,11 +101,12 @@ const MessageDetailPage = () => {
     hasFetchedMessage.current = false;
     hasFetchedOrder.current = false;
     const nextCachedMessage = getCachedMessageDetail(threadId);
-    const nextCachedOrderInfo = getCachedOrderInfo(threadId) || nextCachedMessage?.order_info || null;
+    const nextRawOrderInfo = getCachedOrderInfo(threadId) || nextCachedMessage?.order_info || null;
+    const nextCachedOrderInfo = hasSavedOrderResult(nextRawOrderInfo) ? nextRawOrderInfo : null;
     setLoading(!nextCachedMessage);
     setMessage(nextCachedMessage);
     setOrderInfo(nextCachedOrderInfo);
-    setLoadingOrder(!nextCachedOrderInfo);
+    setLoadingOrder(false);
     setMentionedOrderName("");
 
     const fetchMessage = async () => {
@@ -164,6 +166,21 @@ const MessageDetailPage = () => {
         } else {
           setReply(savedOrderInfo?.msg || "");
         }
+        if (savedOrderInfo?.confirmed && savedOrderInfo?.shopify_order) {
+          fetchOrderInfoCached(message._id, { force: true })
+            .then((freshOrderInfo) => {
+              setOrderInfo(freshOrderInfo);
+              setCachedOrderInfo(message._id, freshOrderInfo);
+              if (freshOrderInfo?.msg === "Email not matched") {
+                setReply("Please send inquiry via email from the order.");
+              } else {
+                setReply(freshOrderInfo?.msg || "");
+              }
+            })
+            .catch((err) => {
+              console.error("Failed to refresh confirmed order info", err);
+            });
+        }
         return savedOrderInfo;
       }
       if (hasFetchedOrder.current) return;
@@ -171,8 +188,21 @@ const MessageDetailPage = () => {
       console.log("[OrderInfo] Analyzing:", message._id);
 
       try {
-        setLoadingOrder(true);
         setError(null);
+        const precheck = await axios.get(
+          `${import.meta.env.VITE_API_URL || ""}/message/${message._id}/order-precheck`,
+          {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          }
+        );
+        if (precheck.data?.no_orders) {
+          const noOrdersInfo = precheck.data.order_info as OrderInfo;
+          setOrderInfo(noOrdersInfo);
+          setCachedOrderInfo(message._id, noOrdersInfo);
+          setReply(noOrdersInfo?.msg || "");
+          return noOrdersInfo;
+        }
+        setLoadingOrder(true);
         const nextOrderInfo = await fetchOrderInfoCached(message._id);
         console.log("[OrderInfo] Result:", message._id, nextOrderInfo?.order_id || "(no order_id)");
         setOrderInfo(nextOrderInfo);

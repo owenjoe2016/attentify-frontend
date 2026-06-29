@@ -85,9 +85,12 @@ export function seedMessageSummaryCache(message: Partial<Message> & { _id: strin
   setCachedMessageDetail(message as Message);
 }
 
-export async function fetchOrderInfoCached(messageId: string): Promise<OrderInfo> {
+export async function fetchOrderInfoCached(
+  messageId: string,
+  options: { force?: boolean } = {}
+): Promise<OrderInfo> {
   const cached = getCachedOrderInfo(messageId);
-  if (cached && (cached.no_orders || (cached.order_id && cached.shopify_order))) return cached;
+  if (!options.force && cached && (cached.no_orders || (cached.order_id && cached.shopify_order))) return cached;
 
   const inflight = orderInfoInflight.get(messageId);
   if (inflight) return inflight;
