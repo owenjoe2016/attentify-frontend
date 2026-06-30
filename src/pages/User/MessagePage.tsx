@@ -10,6 +10,7 @@ import {
   ArrowPathIcon,
   ArrowUturnLeftIcon,
   ChevronDownIcon,
+  PaperClipIcon,
 } from "@heroicons/react/24/outline";
 import axios from "axios";
 import { useNotification } from "../../context/NotificationContext";
@@ -50,6 +51,16 @@ interface Message {
   default_store_shop?: string;
   order_matching_store_ids?: string[];
   order_matching_store_shops?: string[];
+  has_attachments?: boolean;
+  first_attachment?: MessageAttachment;
+}
+
+interface MessageAttachment {
+  filename?: string;
+  mime_type?: string;
+  size?: number;
+  gmail_message_id?: string;
+  attachment_id?: string;
 }
 
 interface Store {
@@ -572,6 +583,37 @@ export default function MessagePage() {
     setCurrentPage(1);
   };
 
+  const handleAttachmentDownload = async (
+    event: React.MouseEvent<HTMLButtonElement>,
+    msg: Message
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const attachment = msg.first_attachment;
+    if (!attachment?.gmail_message_id || !attachment?.attachment_id) return;
+
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL || ""}/message/${msg._id}/attachments/${attachment.gmail_message_id}/${attachment.attachment_id}`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          responseType: "blob",
+        }
+      );
+      const url = window.URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = attachment.filename || "attachment";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      notify("error", "Failed to download attachment.");
+    }
+  };
+
   const handleSyncGmail = async () => {
     if (!currentCompanyId) return;
 
@@ -1083,7 +1125,7 @@ export default function MessagePage() {
                     aria-label="Select all messages"
                   />
                 </th>
-                <th className="w-12 px-3 py-3 text-right text-gray-500">#</th>
+                <th className="w-16 px-3 py-3 text-right text-gray-500">#</th>
                 <th className="px-4 py-3 min-w-[150px] text-left">Client</th>
                 {visibleColumns.store && <th className="px-4 py-3 min-w-[170px] text-left">Store</th>}
                 <th className="px-4 py-3 min-w-[240px] text-left">
@@ -1153,8 +1195,23 @@ export default function MessagePage() {
                         aria-label={`Select message ${msg.title || msg._id}`}
                       />
                     </td>
-                    <td className="px-3 py-4 text-right text-sm font-medium text-gray-400">
-                      {(currentPage - 1) * pageSize + index + 1}
+                    <td className="px-3 py-4 text-sm font-medium text-gray-400">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {msg.has_attachments && msg.first_attachment ? (
+                          <button
+                            type="button"
+                            onClick={(event) => handleAttachmentDownload(event, msg)}
+                            className="text-gray-500 hover:text-blue-700"
+                            title={`Download ${msg.first_attachment.filename || "attachment"}`}
+                            aria-label={`Download attachment for ${msg.title || msg.ticket || "message"}`}
+                          >
+                            <PaperClipIcon className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <span className="h-4 w-4" aria-hidden="true" />
+                        )}
+                        <span>{(currentPage - 1) * pageSize + index + 1}</span>
+                      </div>
                     </td>
                     <td className="px-4 py-4 font-medium text-gray-700">
                       {msg.client}
